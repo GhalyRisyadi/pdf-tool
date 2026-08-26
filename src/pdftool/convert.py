@@ -191,6 +191,7 @@ def _ask_pdfa_level() -> str | None:
             input("\nEnter to continue")
             continue
 
+        clear()
         return mapping[choice]
 
 
@@ -223,8 +224,8 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
     print(f"\nConvert to PDF/A")
     print("─" * 36)
     print(f"\nFile    : {path.name}")
-    print(f"\nTarget  : PDF/A-{level}b")
-    print("[*] Converting PDF...")
+    print(f"Target  : PDF/A-{level}b")
+    print("\n[*] Converting PDF...")
     print("    (This may take a while for large/complex files; please wait.)")
 
     try:
@@ -244,7 +245,7 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
             print(f"\n[ERROR] Failed to convert: {result.stderr}")
             return
 
-        print("[✓] PDF/A document generated.\n")
+        print("\n[✓] PDF/A document generated.\n")
         print(f"[*] Validating PDF/A-{level}b...")
 
         conformance_notes = ""
