@@ -24,7 +24,7 @@ def pdf_to_jpg(path: Path, dpi: int = 150, quality: int = 85, output_dir: Path =
     except Exception as e:
         print(f"\n[ERROR] Failed to convert: {e}")
         if any(k in str(e).lower() for k in ["poppler", "pdftoppm", "pdfinfo"]):
-            print("\n[!] Poppler belum terinstall.")
+            print("\n[!] Poppler is not installed.")
             print("    Ubuntu/Debian : sudo apt install poppler-utils")
             print("    macOS         : brew install poppler")
             print("    Windows       : https://github.com/oschwartz10612/poppler-windows/releases")
@@ -77,8 +77,8 @@ def pdf_to_text(path: Path, output_path: Path = None):
         print(f"    Saved in : {output_path.resolve()}")
 
         if empty_pages:
-            print(f"\n    [!] {empty_pages}/{total} halaman nggak ada teks yang bisa diekstrak.")
-            print("        Kemungkinan hasil scan/gambar — butuh OCR, bukan text extraction biasa.")
+            print(f"\n    [!] {empty_pages}/{total} pages have no extractable text.")
+            print("        Likely scan/image results — requires OCR, not standard text extraction.")
 
     except Exception as e:
         print(f"\n[ERROR] Failed to convert: {e}")
@@ -162,13 +162,149 @@ def pdf_to_html(path: Path, output_path: Path = None):
         print(f"    Saved in : {output_path.resolve()}")
 
         if messages:
-            print("\n    [i] Catatan parser Mammoth:")
+            print("\n    [i] Mammoth parser notes:")
             for msg in messages:
                 print(f"        - {msg}")
 
     except Exception as e:
         print(f"\n[ERROR] Failed to convert {e}")
-    
+
+def _ask_pdfa_level() -> str | None:
+    while True:
+        print("\nConvert to PDF/A")
+        print("─" * 36)
+        print("\nPDF/A conformance level\n")
+        print("─" * 36)
+        print("1\tPDF/A-1b (most compatible, oldest/strictest standard)")
+        print("2\tPDF/A-2b (modern, supports transparency/JPEG2000 [recommended])")
+        print("3\tPDF/A-3b (Like 2b, but it allows embedding arbitrary files)")
+        print("\n0\tBack")
+
+        choice = input("\nInput [1-3/0] : ").strip()
+
+        if choice == "0":
+            return None
+
+        mapping = {"1": "1", "2": "2", "3": "3"}
+        if not choice in mapping:
+            print("\n[!] Invalid selection.")
+            input("\nEnter to continue")
+            continue
+
+        return mapping[choice]
+
+
+def pdf_to_pdfa(path: Path, output_path: Path = None):
+    import shutil
+
+    if shutil .which("gs") is None:
+        print("\n[ERROR] Ghostscript is not installed.")
+        print("    Ubuntu/Debian : sudo apt install ghostscript")
+        print("    macOS         : brew install ghostscript")
+        print("    Windows       : https://www.ghostscript.com/download/gsdnld.html")
+        return
+
+    level = _ask_pdfa_level()
+    if level is None:
+        return
+
+    try:
+        from pypdf import PdfReader
+        if PdfReader(str(path)).is_encrypted:
+            print("\n[ERROR] PDF is encrypted. Please unlock it first.")
+            return
+    except Exception as e:
+        print(f"\n[ERROR] Failed to read PDF: {e}")
+        return
+
+    if output_path is None:
+        output_path = path.parent / f"{path.stem}_pdfa.pdf"
+
+    print(f"\nConvert to PDF/A")
+    print("─" * 36)
+    print(f"\nFile    : {path.name}")
+    print(f"\nTarget  : PDF/A-{level}b")
+    print("[*] Converting PDF...")
+    print("    (This may take a while for large/complex files; please wait.)")
+
+    try:
+        result = subprocess.run(
+            [
+                "gs", f"-dPDFA={level}", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE",
+                "-dPDFACompatibilityPolicy=1",
+                "-sColorConversionStrategy=RGB",
+                "-sDEVICE=pdfwrite",
+                f"-sOutputFile={output_path}",
+                str(path)
+            ],
+            capture_output=True, text=True, timeout=120,
+        )
+
+        if result.returncode != 0 or not output_path.exists():
+            print(f"\n[ERROR] Failed to convert: {result.stderr}")
+            return
+
+        print("[✓] PDF/A document generated.\n")
+        print(f"[*] Validating PDF/A-{level}b...")
+
+        conformance_notes = ""
+        try:
+            import pikepdf
+            with pikepdf.open(str(output_path)) as pdf:
+                meta = pdf.open_metadata()
+                part = meta.get("pdfaid:part")
+                conf = meta.get("pdfaid:conformance")
+                if part and conf:
+                    conformance_notes = f"PDF/A-{part}{conf.lower()}"
+        except Exception:   
+            pass
+
+        before_kb = path.stat().st_size / 1024
+        after_kb = output_path.stat().st_size / 1024
+
+        page_warning = ""
+        try:
+            from pypdf import PdfReader
+            before_pages = len(PdfReader(str(path)).pages)
+            after_pages = len(PdfReader(str(output_path)).pages)
+            if before_pages != after_pages:
+                page_warning = f"    [!] Warning: Page count changed from {before_pages} to {after_pages}"
+        except Exception:
+            pass
+
+        print(f"\n[✓] Converted: {output_path.name}")
+        print(f"    Before: {before_kb:.0f} KB")
+        print(f"    After : {after_kb:.0f} KB (usually LARGER — fully embedded font")
+        if conformance_notes:
+            print(f"[✓] {conformance_notes} compliant (verified from the output metadata).\n")
+            if page_warning:
+                 print(f"[!] Warning: {page_warning}\n")
+        else:
+            print("\n[!] PDF/A validation failed.\n")
+            print("Issues found:")
+            print("  • Conformance metadata (pdfaid) is missing or invalid")
+            if page_warning:
+                print(f"  • {page_warning}")
+            print("\n[!] PDF/A file was not marked as compliant.\n")
+
+        print(f"    Saved in : {output_path.resolve()}")
+        
+        
+        print("\n    [!] This is a best-effort conversion using Ghostscript; it is NOT an official certification.")
+        print("        Fonts are embedded, and JavaScript and auto-actions are automatically removed (as prohibited by the PDF/A specification),")
+        print("        BUT embedded files and attachments are not automatically stripped. If you need a file")
+        print("        that’s truly free of threats to the archive, run Sanitize PDF first")
+        print("        before converting to PDF/A.")
+        print("        For full compliance validation according to the spec, use veraPDF (separate).")
+
+
+    except subprocess.TimeoutExpired:
+        print("\n[ERROR] Conversion timeout (file too large/complex).")
+
+    except Exception as e:
+        print(f"\n[ERROR] Failed to convert: {e}")
+
+
 def jpg_to_pdf(path: Path, output_path: Path = None):
     from PIL import Image
 
@@ -246,38 +382,7 @@ def doc_to_pdf(path: Path, output_dir: Path = None):
         output_dir = path.parent
 
     print(f"\n[*] Convert DOCX → PDF")
-    print("    (bisa makan waktu lebih lama untuk file besar/kompleks, tunggu sebentar)")
-
-    try:
-        result = run_libreoffice_convert(path, "pdf", output_dir)
-
-        output_path = output_dir / f"{path.stem}.pdf"
-
-        if result.returncode != 0 or not output_path.exists():
-            print(f"\n[ERROR] Gagal convert: {result.stderr}")
-            return
-
-        size_kb = output_path.stat().st_size / 1024
-        print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
-        print(f"    Saved in : {output_path.resolve()}")
-
-    except FileNotFoundError:
-        print("\n[ERROR] LibreOffice belum terinstall.")
-        print("    Ubuntu/Debian : sudo apt install libreoffice")
-        print("    Windows       : https://www.libreoffice.org/download/download/")
-
-    except subprocess.TimeoutExpired:
-        print("\n[ERROR] Conversion timeout (file terlalu besar/kompleks).")
-
-    except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
-
-def markdown_to_pdf(path: Path, output_dir: Path = None):
-    if output_dir is None:
-        output_dir = path.parent
-
-    print(f"\n[*] Convert Markdown → PDF")
-    print("    (bisa makan waktu lebih lama untuk file besar/kompleks, tunggu sebentar)")
+    print("    (It may take longer for large or complex files; please wait a moment.)")
 
     try:
         result = run_libreoffice_convert(path, "pdf", output_dir)
@@ -293,12 +398,43 @@ def markdown_to_pdf(path: Path, output_dir: Path = None):
         print(f"    Saved in : {output_path.resolve()}")
 
     except FileNotFoundError:
-        print("\n[ERROR] LibreOffice belum terinstall.")
+        print("\n[ERROR] LibreOffice is not installed.")
         print("    Ubuntu/Debian : sudo apt install libreoffice")
         print("    Windows       : https://www.libreoffice.org/download/download/")
 
     except subprocess.TimeoutExpired:
-        print("\n[ERROR] Conversion timeout (file terlalu besar/kompleks).")
+        print("\n[ERROR] Conversion timeout (file too large/complex).")
+
+    except Exception as e:
+        print(f"\n[ERROR] Failed to convert: {e}")
+
+def markdown_to_pdf(path: Path, output_dir: Path = None):
+    if output_dir is None:
+        output_dir = path.parent
+
+    print(f"\n[*] Convert Markdown → PDF")
+    print("    (It may take longer for large or complex files; please wait a moment.)")
+
+    try:
+        result = run_libreoffice_convert(path, "pdf", output_dir)
+
+        output_path = output_dir / f"{path.stem}.pdf"
+
+        if result.returncode != 0 or not output_path.exists():
+            print(f"\n[ERROR] Failed to convert: {result.stderr}")
+            return
+
+        size_kb = output_path.stat().st_size / 1024
+        print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
+        print(f"    Saved in : {output_path.resolve()}")
+
+    except FileNotFoundError:
+        print("\n[ERROR] LibreOffice is not installed.")
+        print("    Ubuntu/Debian : sudo apt install libreoffice")
+        print("    Windows       : https://www.libreoffice.org/download/download/")
+
+    except subprocess.TimeoutExpired:
+        print("\n[ERROR] Conversion timeout (file too large/complex).")
 
     except Exception as e:
         print(f"\n[ERROR] Failed to convert: {e}")
