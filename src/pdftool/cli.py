@@ -2,7 +2,7 @@ from pathlib import Path
 
 from .utils import clear, input_file, input_files, ensure_docx
 from .info import pdf_analysis, jpg_analysis, doc_info
-from .convert import pdf_to_jpg, pdf_to_doc, pdf_to_text, pdf_to_markdown, pdf_to_html, jpg_to_pdf, jpg_to_png, png_to_jpg, doc_to_pdf
+from .convert import markdown_to_pdf, pdf_to_jpg, pdf_to_doc, pdf_to_text, pdf_to_markdown, pdf_to_html, jpg_to_pdf, jpg_to_png, png_to_jpg, doc_to_pdf
 from .compress import pdf_compres, jpg_compres, doc_compres
 from .pages_organizer import merge_pdf, split_pdf, merge_docx, split_docx, extract_pages, delete_pages, rotate_pages
 from .privacy import pdf_strip_metadata, jpg_strip_exif, pdf_encrypt, pdf_unlock, pdf_redact
@@ -75,9 +75,10 @@ def flow_convert_file():
         print("7\tJPG  → PNG")
         print("8\tPNG  → JPG")
         print("9\tDOCX → PDF")
+        print("10\tMarkdown → PDF")
         print("\n0\tBack")
 
-        choice = input("\nInput [1-9/0] : ").strip()
+        choice = input("\nInput [1-10/0] : ").strip()
 
         if choice == "0":
             return
@@ -92,7 +93,9 @@ def flow_convert_file():
             "7": ("JPG",      [".jpg", ".jpeg"], jpg_to_png),
             "8": ("PNG",      [".png"],          png_to_jpg),
             "9": ("DOC/DOCX", [".doc", ".docx"], doc_to_pdf),
+            "10": ("Markdown", [".md"],          markdown_to_pdf),  
         }
+
 
         if choice not in config:
             print("\n[!] Invalid selection.")

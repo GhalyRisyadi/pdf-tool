@@ -271,3 +271,34 @@ def doc_to_pdf(path: Path, output_dir: Path = None):
 
     except Exception as e:
         print(f"\n[ERROR] Failed to convert: {e}")
+
+def markdown_to_pdf(path: Path, output_dir: Path = None):
+    if output_dir is None:
+        output_dir = path.parent
+
+    print(f"\n[*] Convert Markdown → PDF")
+    print("    (bisa makan waktu lebih lama untuk file besar/kompleks, tunggu sebentar)")
+
+    try:
+        result = run_libreoffice_convert(path, "pdf", output_dir)
+
+        output_path = output_dir / f"{path.stem}.pdf"
+
+        if result.returncode != 0 or not output_path.exists():
+            print(f"\n[ERROR] Failed to convert: {result.stderr}")
+            return
+
+        size_kb = output_path.stat().st_size / 1024
+        print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
+        print(f"    Saved in : {output_path.resolve()}")
+
+    except FileNotFoundError:
+        print("\n[ERROR] LibreOffice belum terinstall.")
+        print("    Ubuntu/Debian : sudo apt install libreoffice")
+        print("    Windows       : https://www.libreoffice.org/download/download/")
+
+    except subprocess.TimeoutExpired:
+        print("\n[ERROR] Conversion timeout (file terlalu besar/kompleks).")
+
+    except Exception as e:
+        print(f"\n[ERROR] Failed to convert: {e}")
