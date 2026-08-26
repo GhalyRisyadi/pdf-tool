@@ -191,8 +191,8 @@ def _ask_pdfa_level() -> str | None:
             input("\nEnter to continue")
             continue
 
-        clear()
         return mapping[choice]
+        clear()
 
 
 def pdf_to_pdfa(path: Path, output_path: Path = None):
