@@ -277,7 +277,7 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
         print(f"    Before: {before_kb:.0f} KB")
         print(f"    After : {after_kb:.0f} KB (usually LARGER — fully embedded font")
         if conformance_notes:
-            print(f"[✓] {conformance_notes} compliant (verified from the output metadata).\n")
+            print(f"\n[✓] {conformance_notes} compliant (verified from the output metadata).\n")
             if page_warning:
                  print(f"[!] Warning: {page_warning}\n")
         else:
