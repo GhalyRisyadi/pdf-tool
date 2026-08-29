@@ -473,6 +473,19 @@ def pdf_unlock(path:Path):
     
 
 # ─── PDF Redact ──────────────────────────────────────────────────────────────
+def _apply_redactions(doc, findings: dict, output: Path) -> int:
+    pages_touched = set()
+    for matches in findings.values():
+        for pi, rect in matches:
+            doc[pi].add_redact_annot(rect, fill=(0, 0, 0))
+            pages_touched.add(pi)
+ 
+    for pi in pages_touched:
+        doc[pi].apply_redactions()
+ 
+    doc.save(str(output), garbage=3, deflate=True)
+    return len(pages_touched)
+
 def pdf_redact(path: Path):
     import pymupdf
 
@@ -544,19 +557,8 @@ def pdf_redact(path: Path):
 
     print("\n[*] Applying redactions...")
 
-    pages_touched = set()
-    for matches in findings.values():
-        for pi, rect in matches:
-            doc[pi].add_redact_annot(rect, fill=(0, 0, 0))
-            pages_touched.add(pi)
-
-    # Eksekusi pemusnahan teks di memori
-    for pi in pages_touched:
-        doc[pi].apply_redactions()
-
-    # Menyimpan file
     output = path.parent / f"{path.stem}_redacted.pdf"
-    doc.save(str(output), garbage=3, deflate=True) 
+    _apply_redactions(doc, findings, output)
     doc.close()
 
     # --- UI: Sukses ---

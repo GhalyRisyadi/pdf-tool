@@ -250,7 +250,7 @@ def flow_privacy():
         print("8\tWatermark")
         print("\n0\tBack")
 
-        choice = input("\nInput [1-6/0] : ").strip()
+        choice = input("\nInput [1-8/0] : ").strip()
 
         if choice == "0":
             return
@@ -260,8 +260,8 @@ def flow_privacy():
             "2": ("JPG", [".jpg", ".jpeg"], jpg_strip_exif),
             "3": ("PDF", [".pdf"],          pdf_encrypt),
             "4": ("PDF", [".pdf"],          pdf_unlock),
-            "5": ("PDF", [".pdf"],          pdf_redact),
-            "6": ("PDF", [".pdf"],          pdf_sanitize),
+            "5": ("PDF", [".pdf"],          pdf_sanitize),
+            "6": ("PDF", [".pdf"],          pdf_redact),
         }
 
         if choice not in config:

@@ -14,9 +14,9 @@ PDFtool processes all files **100% on your own computer**. No uploads, no server
 ## Features
 
 - **Info file** — Check the metadata for PDF, JPG, and DOCX files.
-- **Convert file** — Supports PDF, DOC, JPG, PNG, TXT, MD, and HTML.
-- **Optimize file** — Compress PDF, JPG, and DOCX files at low, medium, or high compression levels.
-- **Pages Organizer** — Merge and Split PDF, DOCX.
+- **Convert file** — Supports PDF, DOC, JPG, PNG, TXT, Markdown, and HTML.
+- **Optimize file** — Compress PDF, JPG, and DOCX files at 3 levels. Repair PDF and PDF/A. 
+- **Pages Organizer** — Merge and Split PDF, DOCX. Extract pages, Delete pages, and Rotate pages.
 - **Content Extraction** — Extract images, tables, and links from PDF files.
 - **Privacy file** — Strip metadata (PDF, JPG), Encrypt, Decrypt, Sanitize, Redact. 
 

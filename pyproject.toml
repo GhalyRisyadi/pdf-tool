@@ -1,6 +1,6 @@
 [project]
 name = "pdftool"
-version = "1.2.0"
+version = "1.2.1"
 description = "CLI tool untuk convert dan compress file PDF, JPG, DOC/DOCX"
 requires-python = ">=3.10"
 dependencies = [
