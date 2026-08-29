@@ -1,7 +1,7 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from .utils import run_libreoffice_convert
+from .utils import clear, run_libreoffice_convert
 
 
 def pdf_to_jpg(path: Path, dpi: int = 150, quality: int = 85, output_dir: Path = None):
@@ -192,8 +192,6 @@ def _ask_pdfa_level() -> str | None:
             continue
 
         return mapping[choice]
-        clear()
-
 
 def pdf_to_pdfa(path: Path, output_path: Path = None):
     import shutil
@@ -221,6 +219,7 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
     if output_path is None:
         output_path = path.parent / f"{path.stem}_pdfa.pdf"
 
+    clear()
     print(f"\nConvert to PDF/A")
     print("─" * 36)
     print(f"\nFile    : {path.name}")
@@ -277,7 +276,7 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
         print(f"    Before: {before_kb:.0f} KB")
         print(f"    After : {after_kb:.0f} KB (usually LARGER — fully embedded font")
         if conformance_notes:
-            print(f"\n[✓] {conformance_notes} ... (verified from the output metadata).\n")
+            print(f"\n[✓] {conformance_notes} (verified from the output metadata).\n")
             if page_warning:
                  print(f"[!] Warning: {page_warning}\n")
         else:
