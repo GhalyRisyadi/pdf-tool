@@ -73,13 +73,13 @@ def jpg_analysis(path: Path):
                         lat_dms, lat_dec = format_gps(gps_latitude, gps_latitude_ref)
                         lon_dms, lon_dec = format_gps(gps_longitude, gps_longitude_ref)
 
-                        print("\nGPS        : Present")
-                        print(f"    Latitude : {lat_dms}")
-                        print(f"    Longitude: {lon_dms}")
+                        print("\nGPS:")
+                        print(f"  Latitude  : {lat_dms}")
+                        print(f"  Longitude : {lon_dms}")
 
                         if lat_dec is not None and lon_dec is not None:
-                            print(f"  Coordinates: {lat_dec:.6f}, {lon_dec:.6f}")
-                            print(f"  Map       : https://www.google.com/maps/search/?api=1&query={lat_dec:.6f},{lon_dec:.6f}")
+                            print(f"  Coordinates : {lat_dec:.6f}, {lon_dec:.6f}")
+                            print(f"  Map         : https://www.google.com/maps/search/?api=1&query={lat_dec:.6f},{lon_dec:.6f}")
 
                     else:
                         print("\nGPS")
