@@ -27,7 +27,9 @@ In addition to Python, these two system dependencies are required:
 | Dependency | Function | Linux | Windows |
 |---|---|---|---|
 | poppler | convert PDF→JPG | `sudo apt install poppler-utils` | [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases) |
-| libreoffice | convert DOC→PDF | `sudo apt install libreoffice` | [libreoffice.org](https://www.libreoffice.org/download/download/) |
+| libreoffice | convert DOC→PDF | `sudo apt install libreoffice` | [libreoffice.org](https://www.libreoffice.org/download/) |
+| gs(Ghostscript) | convert PDF→PDF/A | `sudo apt install ghostscript` | [Ghostscript](https://www.ghostscript.com/releases/) |
+| qpdf | repair PDF | `sudo apt install qpdf` | [qpdf](https://github.com/qpdf/qpdf/releases/latest)|
 
 ## Instalasi
 
