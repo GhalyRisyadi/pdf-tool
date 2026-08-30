@@ -1,5 +1,5 @@
 import re
-
+import sys
 from pathlib import Path
 from .privacy import _apply_redactions
 
@@ -17,9 +17,9 @@ _PATTERNS = {
 _LABELS = {
     "email" : "Email",
     "phone" : "Nomor Telepon",
-    "nik" : "NIK (Nomor Induk Kependudukan)",
-    "card" : "Kartu Kredit",
-    "digit16_ambiguous": "Angka 16-digit (NIK atau Kartu Kredit — nggak bisa dipastikan)",
+    "nik":    "NIK (most likely)",
+    "card":   "Kartu Kredit (most likely)",
+    "digit16_ambiguous": "A 16-digit number (National ID number or credit card number—it’s unclear)",
     "ip":     "IP Address",
 }
 
@@ -81,11 +81,18 @@ def pii_scan(path: Path):
         print("\n[ERROR] Encrypted PDF — unlock it first before scanning PII.")
         doc.close()
         return
- 
-    # findings: kategori -> {string -> [(page_index, rect), ...]}
+
+    total_pages = len(doc)
     findings = {key: {} for key in _LABELS}
+    bar_length = 20
  
     for pi, page in enumerate(doc):
+        progress = (pi + 1) / total_pages
+        block = int(round(bar_length * progress))
+        bar = f"\r[{'#' * block + '-' * (bar_length - block)}] {int(progress * 100)}%"
+        sys.stdout.write(bar)
+        sys.stdout.flush()
+
         text = page.get_text()
         per_page = _scan_text(text)
  
@@ -95,35 +102,65 @@ def pii_scan(path: Path):
                 if rects:
                     findings[category].setdefault(val, []).extend((pi, r) for r in rects)
  
+    print()
+
+
     total = sum(len(v) for v in findings.values())
+    categories_found = sum(1 for v in findings.values() if v)
  
     if total == 0:
         print("\n  No PII found.")
         print("  (If this is the scan result, the text is not in the text layer — OCR first.)")
         doc.close()
         return
- 
-    print(f"\n  Found {total} potential PII:\n")
+
+    print("\n[✓] Scan completed")
+    print(f"    Pages scanned : {total_pages}")
+    print(f"    Findings      : {total}")
+    print(f"    Categories    : {categories_found}")
+
+    print("\n" + "─" * 40)
+
     for category, label in _LABELS.items():
         values = findings[category]
         if not values:
             continue
-        pages = sorted({pi + 1 for matches in values.values() for pi, _ in matches})
-        print(f"  [{label}] ({len(values)})")
-        for val in list(values)[:5]:
-            print(f"    - {val}")
-        if len(values) > 5:
-            print(f"    ... and {len(values) - 5} more ")
-        print(f"    pages: {', '.join(map(str, pages))}\n")
+        n = len(values)
+        word = "finding" if n == 1 else "findings"
+        print(f"\n{label:<20}{n} {word}")
+        for val in list(values):
+            pages = sorted({pi + 1 for pi, _ in values[val]})
+            page_word = "page" if len(pages) == 1 else "pages"
+            page_list = ", ".join(map(str, pages))
+            print(f"  • {val:<30} {page_word} {page_list}")
  
-    print("  [!] Category 'ambiguous' needs manual verification — regex can't be sure")
-    print("      whether it's a NIK or credit card number based on the numeric pattern alone.\n")
+    print("\n" + "─" * 40)
+
+    if findings["nik"] or findings["card"]:
+        print("  [!] Category 'ambiguous' needs manual verification — regex can't be sure")
+        print("      whether it's a NIK or credit card number based on the numeric pattern alone.\n")
+
+    ambiguous_count = len(findings.get("digit16 ambiguous", {}))
+    if ambiguous_count:
+        word = "finding requires" if ambiguous_count == 1 else "findings require"
+        print(f"\n[!] {ambiguous_count} ambiguous {word} manual review.")
+        print("    Regex can't determine whether it's a National ID number or a credit card number based solely on the number pattern.")
+
+    pages_affected = len({pi for values in findings.values() for matches in values.values() for pi, _ in matches})
+
+    print("\nRedaction")
+    print(f"  Findings to redact : {total}")
+    print(f"  Pages affected     : {pages_affected}")
+    print("\n[!] Redaction permanently removes the detected data.")
+    print("    This operation cannot be undone.\n")
  
     confirm = input("[?] Redact ALL of the above? [y/N] : ").strip().lower()
     if confirm not in ("y", "yes"):
         print("\n[i] Canceled. The PDF wasn't modified.")
         doc.close()
         return
+
+    print("\n[*] Applying redactions...")
  
     combined = {}
     for category, values in findings.items():
@@ -134,5 +171,8 @@ def pii_scan(path: Path):
     pages_touched = _apply_redactions(doc, combined, output)
     doc.close()
  
-    print(f"\n[✓] {total} PII is permanently redacted on {pages_touched} pages.")
-    print(f"    Saved in : {output.resolve()}")
+    print("\n[✓] Redaction completed")
+    print(f"    Findings redacted : {total}")
+    print(f"    Pages affected    : {pages_touched}")
+    print("\nOutput:")
+    print(f"    {output.resolve()}")
