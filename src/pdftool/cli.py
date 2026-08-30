@@ -7,6 +7,7 @@ from .compress import pdf_compres, jpg_compres, doc_compres
 from .pages_organizer import merge_pdf, split_pdf, merge_docx, split_docx, extract_pages, delete_pages, rotate_pages
 from .privacy import pdf_strip_metadata, jpg_strip_exif, pdf_encrypt, pdf_unlock, pdf_redact
 from .sanitize import pdf_sanitize
+from .pii_scanner import pii_scan
 from .repair import pdf_repair
 from .extraction import extract_images_from_pdf, extract_links_from_pdf, extract_tables_from_pdf
 
@@ -262,10 +263,11 @@ def flow_privacy():
             "4": ("PDF", [".pdf"],          pdf_unlock),
             "5": ("PDF", [".pdf"],          pdf_sanitize),
             "6": ("PDF", [".pdf"],          pdf_redact),
+            "7": ("PDF", [".pdf"],          pii_scan),
         }
 
         if choice not in config:
-            if choice in ["7","8"]:
+            if choice in ["8"]:
                 print("\n[!] This feature is still in development. Stay tuned!")
             else:
                 print("\n[!] Invalid selection.")
