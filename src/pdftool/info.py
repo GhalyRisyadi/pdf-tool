@@ -12,7 +12,9 @@ def jpg_analysis(path: Path):
 
         with Image.open (path) as img:
             exif = img.getexif()
-    
+
+            print("JPG Analysis")
+            print("─" * 50)
             print(f"File    : {path.name}")
             print(f"Size    : {size_kb:.1f} KB  ({size_mb:.2f} MB)")
             print(f"Dimensi : {img.width} x {img.height} px")
@@ -50,7 +52,6 @@ def jpg_analysis(path: Path):
                         and gps_longitude is not None
                         and gps_longitude_ref is not None
                     ):
-                        print("  GPS        : Present")
 
                         def format_gps(coords, ref):
                             try:
@@ -63,22 +64,32 @@ def jpg_analysis(path: Path):
                                 ref_str = str(ref).strip().upper()
                                 if ref_str in ['S', 'W']:
                                     dec = -dec
-                                return f"{int(d)}° {int(m)}' {s:.3f}\" {ref_str} ({dec:.6f})"
+
+                                dms = f"{int(d)}° {int(m)}' {s:.3f}\" {ref_str}"
+                                return dms, dec
                             except Exception:
-                                return f"{coords} {ref}"
+                                return f"{coords} {ref}", None
+                            
+                        lat_dms, lat_dec = format_gps(gps_latitude, gps_latitude_ref)
+                        lon_dms, lon_dec = format_gps(gps_longitude, gps_longitude_ref)
 
-                        lat_str = format_gps(gps_latitude, gps_latitude_ref)
-                        lon_str = format_gps(gps_longitude, gps_longitude_ref)
+                        print("\nGPS        : Present")
+                        print(f"    Latitude : {lat_dms}")
+                        print(f"    Longitude: {lon_dms}")
 
-                        print(f"    Latitude : {lat_str}")
-                        print(f"    Longitude: {lon_str}")
+                        if lat_dec is not None and lon_dec is not None:
+                            print(f"  Coordinates: {lat_dec:.6f}, {lon_dec:.6f}")
+                            print(f"  Map       : https://www.google.com/maps/search/?api=1&query={lat_dec:.6f},{lon_dec:.6f}")
+
                     else:
-                        print("  GPS        : Present, coordinates unavailable")
+                        print("\nGPS")
+                        print("  Present, coordinates unavailable")
             else:
-                print("  GPS        : None")
+                print("\nGPS")
+                print("  None")
 
     except Exception as e:
-        print(f"\n [ERROR] Gagal baca info JPG: {e}")
+        print(f"\n [ERROR] Failed to read JPG info: {e}")
 
 def doc_info(path: Path, origin: Path | None = None):
     from docx import Document
@@ -99,33 +110,51 @@ def doc_info(path: Path, origin: Path | None = None):
         if meta.author: print(f"Author     : {meta.author}")
 
     except Exception as e:
-        print(f"\n[ERROR] Gagal baca info DOC: {e}")
+        print(f"\n[ERROR] Failed to read DOC info: {e}")
 
 def pdf_analysis(path: Path):
     from pypdf import PdfReader
 
     try:
         reader  = PdfReader(str(path))
-        meta = reader.metadata
         size_kb = path.stat().st_size / 1024
         size_mb = size_kb / 1024
         
-        javascript = has_javascript(reader)
-        attachments = get_attachments(reader)
-        fonts = get_fonts(reader)
-        images = count_images(reader)
+        is_encrypted = reader.is_encrypted
+        needs_password = False
 
+        if is_encrypted:
+            if reader.decrypt("") == 0:
+                needs_password = True
+        
+        print("PDF Analysis")
+        print("─" * 50)
         print(f"File        : {path.name}")
         print(f"Size        : {size_kb:.1f} KB ({size_mb:.2f} MB)")
-        print(f"Pages       : {len(reader.pages)}")
-        print(f"Encrypted   : {'Yes' if reader.is_encrypted else 'No'}")
-        print(f"JavaScript  : {'Yes' if javascript else 'No'}")
-        print(f"Attachments : {len(attachments)}")
-        print(f"Images      : {images}")
-        print(f"Fonts       : {len(fonts)}")
+
+        if needs_password:
+            javascript = None
+            fonts = set()
+            print(f"Pages       : (need password to read)")
+            print(f"Attachments : (need password to read)")
+            print(f"Images      : (need password to read)")
+            print(f"Fonts       : (need password to read)")
+        else:
+            meta = reader.metadata
+            javascript = has_javascript(reader)
+            attachments = get_attachments(reader)
+            fonts = get_fonts(reader)
+            images = count_images(reader)
+
+            print(f"Pages       : {len(reader.pages)}")
+            print(f"Attachments : {len(attachments)}")
+            print(f"Images      : {images}")
+            print(f"Fonts       : {len(fonts)}")
 
         print("\nMetadata:")
-        if meta:
+        if needs_password:
+            print("  (need password to read metadata)")
+        elif meta:
             print(f"  Title     : {meta.title or '-'}")
             print(f"  Author    : {meta.author or '-'}")
             print(f"  Subject   : {meta.subject or '-'}")
@@ -134,11 +163,61 @@ def pdf_analysis(path: Path):
         else:
             print("  None")
 
+        print("\nSecurity")
+        _print_security_info(path, is_encrypted, javascript)
+
         if fonts:
-            print("\nFonts:")
+            print(f"\nFonts: {len(fonts)}")
 
             for font in sorted(fonts):
-                print(f"  - {font}")
+                print(f"  • {font}")
 
     except Exception as e:
-        print(f"\n[ERROR] Gagal analys file PDF: {e}")
+        print(f"\n[ERROR] Failed to read PDF file: {e}")
+
+_ENC_METHOD_LABELS = {
+    "none": "RC4",
+    "rc4":  "RC4",
+    "aes":  "AES",
+    "aesv3": "AES",
+}
+
+def _print_security_info(path: Path, is_encrypted: bool, javascript: bool | None):
+    
+    if not is_encrypted:
+        print(f"  Encrypted   : No")
+        print(f"  JavaScript  : {'Yes' if javascript else 'No'}")
+        print(f"  Permissions : -")
+        return
+ 
+    import pikepdf
+ 
+    try:
+        with pikepdf.open(str(path)) as pdf:
+            enc = pdf.encryption
+            allow = pdf.allow
+ 
+            method = _ENC_METHOD_LABELS.get(str(enc.stream_method).split(".")[-1], "Unknown")
+            algo = f"{method}-{enc.bits}"
+ 
+            if allow.print_highres:
+                print_status = "Allowed"
+            elif allow.print_lowres:
+                print_status = "Low-res only"
+            else:
+                print_status = "Denied"
+ 
+            js_label = "(not yet checked)" if javascript is None else ("Yes" if javascript else "No")
+ 
+            print(f"  Encrypted   : Yes")
+            print(f"  Encryption  : {algo}")
+            print(f"  JavaScript  : {js_label}")
+            print(f"  Print       : {print_status}")
+            print(f"  Copy        : {'Allowed' if allow.extract else 'Denied'}")
+            print(f"  Modify      : {'Allowed' if allow.modify_other else 'Denied'}")
+ 
+    except pikepdf.PasswordError:
+        print(f"  Encrypted   : Yes")
+        print(f"  Encryption  : (need password to read)")
+        print(f"  JavaScript  : (need password to read)")
+        print(f"  Permissions : (need password to read)")
