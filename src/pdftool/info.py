@@ -74,8 +74,8 @@ def jpg_analysis(path: Path):
                         lon_dms, lon_dec = format_gps(gps_longitude, gps_longitude_ref)
 
                         print("\nGPS:")
-                        print(f"  Latitude  : {lat_dms}")
-                        print(f"  Longitude : {lon_dms}")
+                        print(f"  Latitude   : {lat_dms}")
+                        print(f"  Longitude  : {lon_dms}")
 
                         if lat_dec is not None and lon_dec is not None:
                             print(f"  Coordinates : {lat_dec:.6f}, {lon_dec:.6f}")
