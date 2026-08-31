@@ -31,13 +31,13 @@ In addition to Python, these two system dependencies are required:
 | gs(Ghostscript) | convert PDF→PDF/A | `sudo apt install ghostscript` | [Ghostscript](https://www.ghostscript.com/releases/) |
 | qpdf | repair PDF | `sudo apt install qpdf` | [qpdf](https://github.com/qpdf/qpdf/releases/latest)|
 
-## Instalasi
+## Installation
 
 ```bash
 pipx install git+https://github.com/GhalyRisyadi/pdf-tool.git
 ```
 
-or use a regular pipe:
+or use regular pip:
 ```bash
 pip install git+https://github.com/GhalyRisyadi/pdf-tool.git
 ```

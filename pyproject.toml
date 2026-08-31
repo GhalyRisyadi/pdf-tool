@@ -1,20 +1,20 @@
 [project]
 name = "pdftool"
 version = "1.2.1"
-description = "CLI tool untuk convert dan compress file PDF, JPG, DOC/DOCX"
+description = "CLI tool to convert, compress, and manage PDF, JPG, and DOC/DOCX files"
 requires-python = ">=3.10"
 dependencies = [
-    "pypdf",
-    "pdf2image",
-    "Pillow",
-    "pikepdf",
-    "python-docx",
-    "pdf2docx",
-    "docxcompose",
-    "pymupdf",
-    "pymupdf4llm",
-    "mammoth",
-    "pdfplumber",
+    "pypdf>=4.0",
+    "pdf2image>=1.17",
+    "Pillow>=10.0",
+    "pikepdf>=8.0",
+    "python-docx>=1.1",
+    "pdf2docx>=0.5.6",
+    "docxcompose>=1.4",
+    "pymupdf>=1.23",
+    "pymupdf4llm>=0.0.17",
+    "mammoth>=1.6",
+    "pdfplumber>=0.11",
 ]
 
 [project.scripts]

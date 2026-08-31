@@ -64,14 +64,14 @@ def pdf_strip_metadata(path: Path):
 
 # ─── JPG EXIF ────────────────────────────────────────────────────────────────
 _SENSITIVE_EXIF_TAGS = {
-    271:   "Make",               # Brand kamera/HP
-    272:   "Model",              # Model kamera/HP
+    271:   "Make",               # Camera/Phone Brand
+    272:   "Model",              # Camera/Phone Model
     306:   "DateTime",
     36867: "DateTimeOriginal",
     36868: "DateTimeDigitized",
     315:   "Artist",
     33432: "Copyright",
-    34853: "GPSInfo",            # Koordinat GPS — paling berbahaya
+    34853: "GPSInfo",            # GPS Coordinates — highly sensitive
     40091: "XPAuthor",
     40094: "XPKeywords",
     40092: "XPComment",
@@ -150,6 +150,7 @@ def pdf_encrypt(path: Path):
                         requires_password = True
                     else:
                         is_encrypted = True
+                        is_restriction = True
                 except Exception:
                     requires_password = True
         except Exception:
@@ -171,8 +172,17 @@ def pdf_encrypt(path: Path):
         except Exception:
             is_encrypted = False
  
+    # Fallback: if pypdf raises exception but pikepdf can open → restriction-only
+    if is_encrypted and not requires_password and not is_restriction:
+        try:
+            with pikepdf.open(str(path)) as _pdf:
+                if _pdf.encryption:
+                    is_restriction = True
+        except Exception:
+            pass
+ 
     print(f"\n[*] Lock PDF")
-    print("    Algoritma : AES-256  (PDF Revision 6)")
+    print("    Algorithm : AES-256  (PDF Revision 6)")
     print("─" * 45)
     print(f"File : {path.name}\n")
  
@@ -183,7 +193,7 @@ def pdf_encrypt(path: Path):
         return
     elif is_restriction:
         print("  [i] This file is already restricted")
-        print("    No need to restric")
+        print("    No need to restrict")
         return
     else:
         print("  [i] Unsecured (Ready to lock)")
@@ -496,7 +506,7 @@ def pdf_redact(path: Path):
 
     doc = pymupdf.open(str(path))
 
-    # Cek enkripsi
+    # Check encryption
     if doc.needs_pass:
         print("[!] Encrypted PDF — unlock it first before redacting it.")
         doc.close()
@@ -516,14 +526,14 @@ def pdf_redact(path: Path):
     terms = [t.strip() for t in raw.split(",") if t.strip()]
     findings = {}
     
-    # Mencari kata di setiap halaman
+    # Search terms on each page
     for term in terms:
         matches = [(pi, rect) for pi, page in enumerate(doc) for rect in page.search_for(term)]
         findings[term] = matches
 
     total_matches = sum(len(m) for m in findings.values())
 
-    # --- UI: Tidak Ditemukan ---
+    # --- UI: Not Found ---
     if total_matches == 0:
         print("\n[!] No matching text found.")
         print("    PDF was not modified.")
@@ -531,7 +541,7 @@ def pdf_redact(path: Path):
         doc.close()
         return
 
-    # --- UI: Ditemukan ---
+    # --- UI: Found ---
     print(f"[✓] Found {total_matches} matches\n")
 
     page_match_counts = {}
@@ -548,7 +558,7 @@ def pdf_redact(path: Path):
     print("    The matched text will be permanently removed.")
     print("    This operation cannot be undone.\n")
 
-    # Konfirmasi eksekusi
+    # Execution confirmation
     confirm = input("Apply redaction? [y/N]: ").strip().lower()
     if confirm not in ("y", "yes"):
         print("\n[i] Operation cancelled. PDF was not modified.")
@@ -561,7 +571,7 @@ def pdf_redact(path: Path):
     _apply_redactions(doc, findings, output)
     doc.close()
 
-    # --- UI: Sukses ---
+    # --- UI: Success ---
     print(f"[✓] {total_matches} occurrences permanently redacted.\n")
     print(f"Output : {output.name}")
     size_kb = output.stat().st_size / 1024

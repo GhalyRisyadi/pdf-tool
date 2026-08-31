@@ -4,12 +4,12 @@ from .utils import print_size_result
 
 _ACTION_LABELS = {
     "/JavaScript": "JavaScript",
-    "/Launch":     "Launch (jalankan program eksternal)",
-    "/SubmitForm": "Submit Form (kirim data ke URL eksternal)",
+    "/Launch":     "Launch (run external program)",
+    "/SubmitForm": "Submit Form (send data to external URL)",
     "/ImportData": "Import Data",
-    "/GoToR":      "GoTo Remote (buka file eksternal)",
-    "/GoToE":      "GoTo Embedded (buka file embedded)",
-    "/URI":        "URI (buka link eksternal)",
+    "/GoToR":      "GoTo Remote (open external file)",
+    "/GoToE":      "GoTo Embedded (open embedded file)",
+    "/URI":        "URI (open external link)",
     "/Sound":      "Sound",
     "/Movie":      "Movie",
     "/RichMedia":  "Rich Media",
@@ -39,7 +39,7 @@ _AA_TRIGGER_LABELS = {
 }
 
 _CATEGORY_LABELS = {
-    "open_action":    "OpenAction (jalan otomatis saat dibuka)",
+    "open_action":    "OpenAction (runs automatically on open)",
     "doc_aa":         "Document Additional Actions",
     "javascript":     "Embedded JavaScript",
     "embedded_files": "Embedded Files",
@@ -60,7 +60,7 @@ def _action_label(action) -> str | None:
 
 
 def _walk_name_tree(node):
-    """Yield (name, value) dari PDF name tree, termasuk yang bercabang via /Kids."""
+    """Yield (name, value) pairs from a PDF name tree, including branches via /Kids."""
     if node is None:
         return
     if "/Names" in node:
@@ -94,13 +94,13 @@ def _scan(pdf) -> dict:
                 findings["embedded_files"].append(name)
 
     if "/AcroForm" in root and "/XFA" in root["/AcroForm"]:
-        findings["xfa"].append("XFA form ditemukan (dynamic form logic)")
+        findings["xfa"].append("XFA form detected (dynamic form logic)")
 
     for pi, page in enumerate(pdf.pages, 1):
         if "/AA" in page:
             for key in page["/AA"].keys():
                 findings["page_actions"].append(
-                    f"Halaman {pi}: {_AA_TRIGGER_LABELS.get(str(key), str(key))}"
+                    f"Page {pi}: {_AA_TRIGGER_LABELS.get(str(key), str(key))}"
                 )
 
         if "/Annots" not in page:
@@ -111,13 +111,13 @@ def _scan(pdf) -> dict:
 
             if "/A" in annot:
                 findings["annot_actions"].append(
-                    f"Halaman {pi} [{subtype.lstrip('/')}]: {_action_label(annot['/A'])}"
+                    f"Page {pi} [{subtype.lstrip('/')}]: {_action_label(annot['/A'])}"
                 )
             if "/AA" in annot:
                 for key in annot["/AA"].keys():
                     trig = _AA_TRIGGER_LABELS.get(str(key), str(key))
                     findings["annot_actions"].append(
-                        f"Halaman {pi} [{subtype.lstrip('/')}]: {trig} (trigger)"
+                        f"Page {pi} [{subtype.lstrip('/')}]: {trig} (trigger)"
                     )
             if subtype == "/FileAttachment" and "/FS" in annot:
                 fname = str(annot["/FS"].get("/F", "unnamed"))
@@ -137,7 +137,7 @@ def _print_findings(findings: dict) -> bool:
         for item in items[:10]:
             print(f"    - {item}")
         if len(items) > 10:
-            print(f"    ... dan {len(items) - 10} lainnya")
+            print(f"    ... and {len(items) - 10} more")
     return found_any
 
 
@@ -153,13 +153,13 @@ def pdf_sanitize(path: Path):
             findings = _scan(pdf)
 
             if not _print_findings(findings):
-                print("\n  Tidak ada active content ditemukan. PDF ini bersih.")
+                print("\n  No active content found. This PDF is clean.")
                 return
 
             print()
-            confirm = input("[?] Strip semua elemen di atas? [Y/n] : ").strip().lower()
+            confirm = input("[?] Strip all elements listed above? [Y/n] : ").strip().lower()
             if confirm not in ("", "y", "yes"):
-                print("\n[!] Dibatalkan.")
+                print("\n[!] Canceled.")
                 return
 
             root = pdf.Root
@@ -211,6 +211,6 @@ def pdf_sanitize(path: Path):
 
     except Exception as e:
         if "password" in str(e).lower() or type(e).__name__ == "PasswordError":
-            print("\n[ERROR] PDF terenkripsi — decrypt dulu sebelum sanitize.")
+            print("\n[ERROR] PDF is encrypted — please unlock it before sanitizing.")
         else:
-            print(f"\n[ERROR] Gagal sanitize: {e}")
+            print(f"\n[ERROR] Failed to sanitize: {e}")

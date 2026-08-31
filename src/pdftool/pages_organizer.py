@@ -97,15 +97,15 @@ def split_pdf(path: Path, output_dir: Path = None):
         print(f"\n[ERROR] Failed split: {e}")
 
 def _flatten_ranges(ranges: list[tuple[int, int]]) -> list[int]:
-    """[(1,3),(5,5)] -> [1,2,3,5], urut & tanpa duplikat."""
+    """Flatten [(1,3),(5,5)] -> [1,2,3,5], sorted and deduplicated."""
     pages = set()
     for start, end in ranges:
         pages.update(range(start, end + 1))
     return sorted(pages)
 
 def extract_pages(path: Path, output: Path = None):
-    """Ambil halaman tertentu, gabung jadi SATU file baru. Beda sama split_pdf
-    yang bikin file terpisah per range — ini semua digabung jadi satu output."""
+    """Extract specific pages and combine them into ONE new file. Unlike split_pdf
+    which creates separate files per range — this combines all selected pages into a single output."""
     from pypdf import PdfReader, PdfWriter
  
     try:
@@ -146,8 +146,8 @@ def extract_pages(path: Path, output: Path = None):
         print(f"\n[ERROR] Failed extract: {e}")
 
 def delete_pages(path: Path, output: Path = None):
-    """Buang halaman tertentu, sisanya digabung jadi satu file — kebalikan
-    dari extract_pages."""
+    """Remove specific pages and combine the rest into one file — the inverse
+    of extract_pages."""
     from pypdf import PdfReader, PdfWriter
  
     try:

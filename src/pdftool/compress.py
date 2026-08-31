@@ -21,9 +21,9 @@ def ask_compress_level() -> str | None:
     while True:
         clear()
         print("\nCompression level\n")
-        print("1\tLow    → ukuran paling kecil, kualitas turun signifikan")
-        print("2\tMedium → seimbang [direkomendasikan]")
-        print("3\tHigh   → kualitas terbaik, pengurangan ukuran lebih kecil")
+        print("1\tLow    → smallest file size, noticeable quality drop")
+        print("2\tMedium → balanced [recommended]")
+        print("3\tHigh   → best quality, smaller file size reduction")
         print("\n0\tBack")
 
         choice = input("\nInput [1-3/0] : ").strip()
@@ -33,7 +33,7 @@ def ask_compress_level() -> str | None:
 
         mapping = {"1": "low", "2": "medium", "3": "high"}
         if choice not in mapping:
-            print("\n[!] Pilihan tidak valid.")
+            print("\n[!] Invalid selection.")
             input("\nEnter to continue")
             continue
 
@@ -80,7 +80,7 @@ def pdf_compres(path: Path):
 
         _print_result(output, original_kb)
         if level != "high":
-            print("    [!] Teks dalam PDF ini tidak bisa di-select lagi.")
+            print("    [!] Text in this PDF can no longer be selected (rasterized).")
 
     except Exception as e:
         print(f"\n[ERROR] Failed to compress: {e}")

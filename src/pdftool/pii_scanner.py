@@ -16,10 +16,10 @@ _PATTERNS = {
 
 _LABELS = {
     "email" : "Email",
-    "phone" : "Nomor Telepon",
-    "nik":    "NIK (most likely)",
-    "card":   "Kartu Kredit (most likely)",
-    "digit16_ambiguous": "A 16-digit number (National ID number or credit card number—it’s unclear)",
+    "phone" : "Phone Number",
+    "nik":    "National ID (NIK, most likely)",
+    "card":   "Credit Card (most likely)",
+    "digit16_ambiguous": "16-digit number (National ID or credit card — unclear)",
     "ip":     "IP Address",
 }
 
@@ -140,7 +140,7 @@ def pii_scan(path: Path):
         print("  [!] Category 'ambiguous' needs manual verification — regex can't be sure")
         print("      whether it's a NIK or credit card number based on the numeric pattern alone.\n")
 
-    ambiguous_count = len(findings.get("digit16 ambiguous", {}))
+    ambiguous_count = len(findings.get("digit16_ambiguous", {}))
     if ambiguous_count:
         word = "finding requires" if ambiguous_count == 1 else "findings require"
         print(f"\n[!] {ambiguous_count} ambiguous {word} manual review.")

@@ -196,7 +196,7 @@ def _ask_pdfa_level() -> str | None:
 def pdf_to_pdfa(path: Path, output_path: Path = None):
     import shutil
 
-    if shutil .which("gs") is None:
+    if shutil.which("gs") is None:
         print("\n[ERROR] Ghostscript is not installed.")
         print("    Ubuntu/Debian : sudo apt install ghostscript")
         print("    macOS         : brew install ghostscript")

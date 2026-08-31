@@ -17,7 +17,7 @@ def jpg_analysis(path: Path):
             print("─" * 50)
             print(f"File    : {path.name}")
             print(f"Size    : {size_kb:.1f} KB  ({size_mb:.2f} MB)")
-            print(f"Dimensi : {img.width} x {img.height} px")
+            print(f"Dimensions : {img.width} x {img.height} px")
             print(f"Format  : {img.format}")
             print(f"Mode    : {img.mode}")
 

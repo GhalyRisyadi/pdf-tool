@@ -23,12 +23,12 @@ def input_file(label: str, extensions: list[str]) -> Path:
         if not p.exists():
             print("[!] File not found.")
         elif p.suffix.lower() not in extensions:
-            print(f"[!] File harus berekstensi {ext_display}.")
+            print(f"[!] File must have extension {ext_display}.")
         else:
             return p
 
-def run_libreoffice_convert (path: Path, to: str, outdir: Path, timeout: int=120):
-     with tempfile.TemporaryDirectory(prefix="pdftool_lo_profile_") as profile_dir:
+def run_libreoffice_convert(path: Path, to: str, outdir: Path, timeout: int=120):
+    with tempfile.TemporaryDirectory(prefix="pdftool_lo_profile_") as profile_dir:
         return subprocess.run(
             ["libreoffice", "--headless",
              f"-env:UserInstallation=file://{profile_dir}",
@@ -43,8 +43,8 @@ def ensure_docx(path: Path):
         yield path
         return
 
-    print(f"\n[*] '{path.name}' masih format .doc lama — mengonversi ke .docx dulu (via LibreOffice)...")
-    print("     (bisa makan waktu lebih lama untuk file besar/kompleks, tunggu sebentar)")
+    print(f"\n[*] '{path.name}' is in the old .doc format — converting to .docx first (via LibreOffice)...")
+    print("    (This may take longer for large or complex files; please wait.)")
 
     with tempfile.TemporaryDirectory(prefix="pdftool_") as tmp:
         tmp_dir = Path(tmp)
@@ -52,34 +52,34 @@ def ensure_docx(path: Path):
             result = run_libreoffice_convert(path, "docx", tmp_dir)
         except FileNotFoundError:
             raise RuntimeError(
-                "LibreOffice belum terinstall.\n"
+                "LibreOffice is not installed.\n"
                 "    Ubuntu/Debian : sudo apt install libreoffice\n"
                 "    Windows       : https://www.libreoffice.org/download/download/"
             )
         except subprocess.TimeoutExpired:
-            raise RuntimeError("Konversi .doc → .docx timeout (file terlalu besar/kompleks).")
+            raise RuntimeError("Conversion .doc → .docx timed out (file too large or complex).")
 
         converted = tmp_dir / f"{path.stem}.docx"
         if result.returncode != 0 or not converted.exists():
             detail = (result.stderr or "").strip() or "unknown error"
-            raise RuntimeError(f"Gagal mengonversi .doc ke .docx: {detail}")
+            raise RuntimeError(f"Failed to convert .doc to .docx: {detail}")
 
-        print("[✓] Konversi selesai.\n")
+        print("[✓] Conversion complete.\n")
         yield converted
 
 def input_files(label: str, extensions: list[str], min_files: int = 2) -> list[Path]:
     ext_display = "/".join(e.upper() for e in extensions)
     paths: list[Path] = []
 
-    print(f"\nMasukkan file {label} satu-satu, urutan sesuai input jadi urutan merge.")
-    print("Kosongkan input lalu Enter kalau sudah selesai.")
+    print(f"\nAdd {label} files one by one — the order of input determines the merge order.")
+    print("Leave the input blank and press Enter when done.")
 
     while True:
-        raw = input(f"\nFile #{len(paths) + 1} [{ext_display}] (kosong = selesai) : ").strip().strip('"').strip("'")
+        raw = input(f"\nFile #{len(paths) + 1} [{ext_display}] (blank = done) : ").strip().strip('"').strip("'")
 
         if raw == "":
             if len(paths) < min_files:
-                print(f"[!] Minimal {min_files} file untuk merge.")
+                print(f"[!] At least {min_files} files are required to merge.")
                 continue
             return paths
 
@@ -87,9 +87,9 @@ def input_files(label: str, extensions: list[str], min_files: int = 2) -> list[P
         if not p.exists():
             print("[!] File not found.")
         elif p.suffix.lower() not in extensions:
-            print(f"[!] File harus berekstensi {ext_display}.")
+            print(f"[!] File must have extension {ext_display}.")
         elif p in paths:
-            print("[!] File sudah ditambahkan.")
+            print("[!] File already added.")
         else:
             paths.append(p)
             print(f"    [+] {len(paths)}. {p.name}")
@@ -112,7 +112,7 @@ def get_attachments(reader):
 
 def count_images(reader):
     try:
-        # Mengakumulasi panjang array image per halaman
+        # Accumulate image count across all pages
         return sum(len(page.images) for page in reader.pages)
     except Exception:
         return 0

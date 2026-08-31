@@ -9,13 +9,13 @@ def extract_images_from_pdf(path: Path, output_dir: Path = None):
     if output_dir is None:
         output_dir = path.parent / f"{path.stem}_extracted_images"
 
-    print(f"\n[*] Mengekstrak gambar asli (lossless) dari: {path.name}")
+    print(f"\n[*] Extracting original images (lossless) from: {path.name}")
 
     try:
         doc = fitz.open(str(path))
         
         if len(doc) == 0:
-            print("\n[!] Dokumen PDF kosong atau tidak terbaca.")
+            print("\n[!] PDF document is empty or unreadable.")
             return
 
         extracted_xrefs = set()
@@ -51,17 +51,17 @@ def extract_images_from_pdf(path: Path, output_dir: Path = None):
                 
                 saved_count += 1
                 size_kb = len(image_bytes) / 1024
-                print(f"  [+] Tersimpan: {image_filename}  ({size_kb:.1f} KB)")
+                print(f"  [+] Saved: {image_filename}  ({size_kb:.1f} KB)")
 
         if saved_count == 0:
-            print("\n[!] Tidak ada gambar apapun (bitmap/raster) yang ditemukan di PDF ini.")
-            print("    (Jika ada gambar tapi tidak terekstrak, kemungkinan itu adalah gambar Vektor/Shape).")
+            print("\n[!] No bitmap/raster images found in this PDF.")
+            print("    (If there appear to be images but none were extracted, they may be vector/shape graphics.)")
         else:
-            print(f"\n[✓] Berhasil mengekstrak total {saved_count} gambar asli.")
-            print(f"    Folder Output : {output_dir.resolve()}")
+            print(f"\n[✓] Successfully extracted {saved_count} images.")
+            print(f"    Output folder : {output_dir.resolve()}")
             
     except Exception as e:
-        print(f"\n[ERROR] Gagal mengekstrak gambar: {e}")
+        print(f"\n[ERROR] Failed to extract images: {e}")
 
 def extract_links_from_pdf(path: Path):
     import fitz
@@ -84,7 +84,7 @@ def extract_links_from_pdf(path: Path):
                         extracted_links.append((page_index + 1, uri))
 
         if not extracted_links:
-            print("\n[!] Tidak ditemukan URL / Tautan eksternal di dalam PDF ini.")
+            print("\n[!] No external URLs or links found in this PDF.")
             return
 
         print(f"\nFound {len(extracted_links)} URLs\n")
@@ -108,13 +108,13 @@ def extract_links_from_pdf(path: Path):
                 for page_num, url in extracted_links:
                     f.write(f"Page {page_num:<4} : {url}\n")
             
-            print(f"\n[✓] Tersimpan sebagai TXT: {out_file.name}")
-            print(f"    Lokasi: {out_file.resolve()}")
+            print(f"\n[✓] Saved as TXT: {out_file.name}")
+            print(f"    Location: {out_file.resolve()}")
         else:
-            print("\n[i] Hasil tidak disimpan.")
+            print("\n[i] Result not saved.")
 
     except Exception as e:
-        print(f"\n[ERROR] Gagal mengekstrak tautan: {e}")
+        print(f"\n[ERROR] Failed to extract links: {e}")
 
 def extract_tables_from_pdf(path: Path):
     import pdfplumber
@@ -158,7 +158,7 @@ def extract_tables_from_pdf(path: Path):
             print()
 
             if table_count == 0:
-                print("\n[!] Tidak ditemukan tabel dalam PDF ini.")
+                print("\n[!] No tables found in this PDF.")
                 return
 
             print(f"\nTables found: {table_count}\n")
@@ -186,7 +186,7 @@ def extract_tables_from_pdf(path: Path):
 
             print(f"\n[✓] Extracted {table_count} tables")
             print(f"[✓] Output: {output_dir.name}")
-            print(f"    Lokasi: {output_dir.resolve()}")
+            print(f"    Location: {output_dir.resolve()}")
 
     except Exception as e:
-        print(f"\n[ERROR] Gagal mengekstrak tabel: {e}")
+        print(f"\n[ERROR] Failed to extract tables: {e}")
