@@ -190,3 +190,119 @@ def extract_tables_from_pdf(path: Path):
 
     except Exception as e:
         print(f"\n[ERROR] Failed to extract tables: {e}")
+
+def run_ocr(path: Path):
+    import shutil
+    try:
+        import pytesseract
+    except ImportError:
+        print("\n[ERROR] pytesseract is not installed. Please install it first.")
+        return
+
+    if shutil.which("tesseract") is None:
+        print("\n[ERROR] Tesseract OCR is not installed or not in PATH.")
+        print("    Ubuntu/Debian : sudo apt install tesseract-ocr tesseract-ocr-ind")
+        print("    macOS         : brew install tesseract")
+        print("    Windows       : https://github.com/UB-Mannheim/tesseract/wiki")
+        return
+
+    print("\nFormat Output OCR")
+    print("─" * 36)
+    print("1\tExtract text to file .txt")
+    print("2\tCreate a Searchable PDF")
+    print("\n0\tBack")
+    
+    out_format = input("\nInput [1-2/0] : ").strip()
+    if out_format == "0":
+        return
+    if out_format not in ("1", "2"):
+        print("\n[!] Invalid selection.")
+        return
+
+    lang_choice = input("\nLanguage (eng / ind) [eng] : ").strip().lower()
+    if not lang_choice:
+        lang_choice = "eng"
+    if lang_choice not in ("eng", "ind"):
+        print("\n[!] Currently supports only 'eng' or 'ind'.")
+        return
+
+    is_pdf = path.suffix.lower() == ".pdf"
+    pages = []
+    
+    if is_pdf:
+        from pypdf import PdfReader
+        from .pages_organizer import _parse_ranges, _flatten_ranges
+        try:
+            reader = PdfReader(str(path))
+            total = len(reader.pages)
+        except Exception as e:
+            print(f"\n[ERROR] Unable to open PDF: {e}")
+            return
+            
+        print(f"\n[*] OCR PDF: {path.name} ({total} pages)")
+        print("    Input example : 1-3,5  (blank = process ALL pages)")
+        raw_range = input("\nPage range: ").strip()
+        
+        if raw_range:
+            ranges = _parse_ranges(raw_range, total)
+            if ranges is None:
+                print(f"\n[!] Invalid range (pages 1-{total}).")
+                return
+            pages = _flatten_ranges(ranges)
+        else:
+            pages = list(range(1, total + 1))
+    else:
+        pages = [1]
+        
+    print("\n[*] Processing OCR... Please wait.")
+    
+    try:
+        if is_pdf:
+            from pdf2image import convert_from_path
+            images = []
+            for p in pages:
+                print(f"    Scanning page {p}...")
+                img_list = convert_from_path(str(path), first_page=p, last_page=p, dpi=300)
+                if img_list:
+                    images.append(img_list[0])
+        else:
+            from PIL import Image
+            images = [Image.open(path)]
+            
+        if not images:
+            print("\n[!] Failed to load images.")
+            return
+
+        if out_format == "1":
+            out_file = path.parent / f"{path.stem}_ocr.txt"
+            with open(out_file, "w", encoding="utf-8") as f:
+                for i, img in enumerate(images):
+                    text = pytesseract.image_to_string(img, lang=lang_choice)
+                    if is_pdf:
+                        f.write(f"--- Page {pages[i]} ---\n")
+                    f.write(text)
+                    f.write("\n\n")
+            print(f"\n[✓] Saved OCR text to: {out_file.name}")
+            
+        elif out_format == "2":
+            out_file = path.parent / f"{path.stem}_searchable.pdf"
+            if len(images) == 1:
+                pdf_bytes = pytesseract.image_to_pdf_or_hocr(images[0], extension='pdf', lang=lang_choice)
+                with open(out_file, "wb") as f:
+                    f.write(pdf_bytes)
+            else:
+                from pypdf import PdfWriter, PdfReader
+                import io
+                writer = PdfWriter()
+                for i, img in enumerate(images):
+                    pdf_bytes = pytesseract.image_to_pdf_or_hocr(img, extension='pdf', lang=lang_choice)
+                    r = PdfReader(io.BytesIO(pdf_bytes))
+                    writer.add_page(r.pages[0])
+                with open(out_file, "wb") as f:
+                    writer.write(f)
+            
+            size_kb = out_file.stat().st_size / 1024
+            print(f"\n[✓] Searchable PDF created: {out_file.name} ({size_kb:.0f} KB)")
+            
+    except Exception as e:
+        print(f"\n[ERROR] OCR failed: {e}")

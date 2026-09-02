@@ -248,6 +248,95 @@ def rotate_pages(path: Path, output: Path = None):
     except Exception as e:
         print(f"\n[ERROR] Failed rotate: {e}")
 
+def _parse_reorder(raw: str, total_pages: int) -> list[int] | None:
+    raw = raw.strip().lower()
+    if not raw:
+        return None
+    if raw in ("reverse", "rev"):
+        return list(range(total_pages, 0, -1))
+
+    order = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            pieces = part.split("-", 1)
+            if not (pieces[0].strip().isdigit() and pieces[1].strip().isdigit()):
+                return None
+            start, end = int(pieces[0].strip()), int(pieces[1].strip())
+            if not (1 <= start <= total_pages and 1 <= end <= total_pages):
+                return None
+            if start <= end:
+                order.extend(range(start, end + 1))
+            else:
+                order.extend(range(start, end - 1, -1))
+        else:
+            if not part.isdigit():
+                return None
+            val = int(part)
+            if not (1 <= val <= total_pages):
+                return None
+            order.append(val)
+
+    if not order:
+        return None
+
+    return order
+
+def reorder_pages(path: Path, output: Path = None):
+    from pypdf import PdfReader, PdfWriter
+
+    try:
+        reader = PdfReader(str(path))
+        total = len(reader.pages)
+    except Exception as e:
+        print(f"\n[ERROR] Unable to open PDF: {e}")
+        return
+
+    if total <= 1:
+        print(f"\n[i] This PDF only has {total} page — reordering is not needed.")
+        return
+
+    print(f"\n[*] Reorder pages: {path.name}  ({total} pages)")
+    print("    Input example : 3,1,2,4-5  or  5,4,3,2,1  or  reverse")
+    raw = input("\nNew page order: ").strip()
+
+    order = _parse_reorder(raw, total)
+    if order is None:
+        print(f"\n[!] Invalid input (expected page numbers between 1 and {total}).")
+        return
+
+    if len(order) != total or set(order) != set(range(1, total + 1)):
+        duplicates = [p for p in set(order) if order.count(p) > 1]
+        missing = sorted(set(range(1, total + 1)) - set(order))
+        if duplicates:
+            print(f"\n[!] Duplicate page(s) in order: {', '.join(map(str, sorted(duplicates)))}")
+        if missing:
+            print(f"\n[!] Missing page(s) in order: {', '.join(map(str, missing))}")
+        print(f"    Please specify a complete arrangement of all pages (1-{total}).")
+        return
+
+    if output is None:
+        output = path.parent / f"{path.stem}_reordered.pdf"
+
+    try:
+        writer = PdfWriter()
+        for pg_num in order:
+            writer.add_page(reader.pages[pg_num - 1])
+
+        with open(output, "wb") as f:
+            writer.write(f)
+
+        size_kb = output.stat().st_size / 1024
+        print(f"\n[✓] Reordered {total} pages: {output.name}  ({size_kb:.0f} KB)")
+        print(f"    New Order : {', '.join(map(str, order))}")
+        print(f"    Saved in  : {output.resolve()}")
+
+    except Exception as e:
+        print(f"\n[ERROR] Failed to reorder: {e}")
+
+
 def merge_docx(paths: list[Path], output: Path = None):
     from docx import Document
     from docxcompose.composer import Composer
@@ -294,7 +383,7 @@ def split_docx(path: Path, output_dir: Path = None):
     print("    [!] Split based on manual page breaks, not rendered pages.\n")
 
     body = doc.element.body
-    sectPr = body.find(qn("w:sectPr"))  # section properties (margin, size, dll)
+    sectPr = body.find(qn("w:sectPr"))  # section properties (margin, size, etc.)
 
     chunks = [[]]
     has_pagebreak = False
