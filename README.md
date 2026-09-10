@@ -2,6 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![codecov](https://codecov.io/github/GhalyRisyadi/pdf-tool/graph/badge.svg?token=7UNQEW7VV1)](https://codecov.io/github/GhalyRisyadi/pdf-tool)
 
 CLI tool for converting and compressing PDF, JPG, and DOC/DOCX files directly from the terminal.
 
