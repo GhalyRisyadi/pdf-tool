@@ -191,7 +191,7 @@ def extract_tables_from_pdf(path: Path):
     except Exception as e:
         print(f"\n[ERROR] Failed to extract tables: {e}")
 
-def run_ocr(path: Path):
+def run_ocr(path: Path, output_format: str = None, lang: str = None, pages_range: str = None):
     import shutil
     try:
         import pytesseract
@@ -206,22 +206,32 @@ def run_ocr(path: Path):
         print("    Windows       : https://github.com/UB-Mannheim/tesseract/wiki")
         return
 
-    print("\nFormat Output OCR")
-    print("─" * 36)
-    print("1\tExtract text to file .txt")
-    print("2\tCreate a Searchable PDF")
-    print("\n0\tBack")
-    
-    out_format = input("\nInput [1-2/0] : ").strip()
-    if out_format == "0":
-        return
-    if out_format not in ("1", "2"):
-        print("\n[!] Invalid selection.")
-        return
+    if output_format is None:
+        print("\nFormat Output OCR")
+        print("─" * 36)
+        print("1\tExtract text to file .txt")
+        print("2\tCreate a Searchable PDF")
+        print("\n0\tBack")
+        
+        out_format = input("\nInput [1-2/0] : ").strip()
+        if out_format == "0":
+            return
+        if out_format not in ("1", "2"):
+            print("\n[!] Invalid selection.")
+            return
+    else:
+        out_format = str(output_format).strip()
+        if out_format not in ("1", "2"):
+            print("\n[!] Invalid selection.")
+            return
 
-    lang_choice = input("\nLanguage (eng / ind) [eng] : ").strip().lower()
-    if not lang_choice:
-        lang_choice = "eng"
+    if lang is None:
+        lang_choice = input("\nLanguage (eng / ind) [eng] : ").strip().lower()
+        if not lang_choice:
+            lang_choice = "eng"
+    else:
+        lang_choice = lang.strip().lower()
+
     if lang_choice not in ("eng", "ind"):
         print("\n[!] Currently supports only 'eng' or 'ind'.")
         return
@@ -240,8 +250,11 @@ def run_ocr(path: Path):
             return
             
         print(f"\n[*] OCR PDF: {path.name} ({total} pages)")
-        print("    Input example : 1-3,5  (blank = process ALL pages)")
-        raw_range = input("\nPage range: ").strip()
+        if pages_range is None:
+            print("    Input example : 1-3,5  (blank = process ALL pages)")
+            raw_range = input("\nPage range: ").strip()
+        else:
+            raw_range = str(pages_range).strip()
         
         if raw_range:
             ranges = _parse_ranges(raw_range, total)

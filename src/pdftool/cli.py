@@ -12,8 +12,16 @@ from .repair import pdf_repair
 from .extraction import extract_images_from_pdf, extract_links_from_pdf, extract_tables_from_pdf, run_ocr
 
 
+import sys
+from .ui import print_banner
+
+
 def welcome():
     clear()
+    try:
+        print_banner()
+    except Exception:
+        pass
     print("\n" + "=" * 40)
     print("\t  I Hate PDF file")
     print("=" * 40)
@@ -299,7 +307,7 @@ def flow_privacy():
             print("\n\n[!] Operation cancelled. Returning to main menu...")
             return
 
-def main():
+def interactive_menu():
     try:
         while True:
             welcome()
@@ -325,3 +333,22 @@ def main():
                     break
     except (KeyboardInterrupt, EOFError):
         print("\n\n[!] Exiting pdftool. Goodbye!\n")
+
+
+KNOWN_COMMANDS = {
+    "info", "in", "inf",
+    "convert", "cv", "conv",
+    "optimize", "opti", "opt",
+    "pages", "pg",
+    "extract", "ex", "ext",
+    "privacy", "priv", "sec",
+    "--help", "-h", "--install-completion", "--show-completion",
+}
+
+
+def main():
+    if len(sys.argv) > 1 and any(arg in KNOWN_COMMANDS for arg in sys.argv[1:2]):
+        from .commands import app
+        app()
+    else:
+        interactive_menu()

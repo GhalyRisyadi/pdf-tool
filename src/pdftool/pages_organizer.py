@@ -284,7 +284,7 @@ def _parse_reorder(raw: str, total_pages: int) -> list[int] | None:
 
     return order
 
-def reorder_pages(path: Path, output: Path = None):
+def reorder_pages(path: Path, order_input: str = None, output: Path = None):
     from pypdf import PdfReader, PdfWriter
 
     try:
@@ -299,8 +299,11 @@ def reorder_pages(path: Path, output: Path = None):
         return
 
     print(f"\n[*] Reorder pages: {path.name}  ({total} pages)")
-    print("    Input example : 3,1,2,4-5  or  5,4,3,2,1  or  reverse")
-    raw = input("\nNew page order: ").strip()
+    if order_input is None:
+        print("    Input example : 3,1,2,4-5  or  5,4,3,2,1  or  reverse")
+        raw = input("\nNew page order: ").strip()
+    else:
+        raw = str(order_input).strip()
 
     order = _parse_reorder(raw, total)
     if order is None:
