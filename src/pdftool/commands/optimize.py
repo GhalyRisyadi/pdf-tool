@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 import typer
-from ..compress import pdf_compres, jpg_compres, doc_compres
+from ..compress import pdf_compres, jpg_compres
 from ..repair import pdf_repair
 from ..convert import pdf_to_pdfa
 from ..ui import print_error
@@ -41,10 +41,8 @@ def optimize_cmd(
             pdf_compres(file_path, level=level, output=output)
         elif ext in [".jpg", ".jpeg"]:
             jpg_compres(file_path, level=level, output=output)
-        elif ext in [".docx", ".doc"]:
-            doc_compres(file_path, level=level, output=output)
         else:
-            print_error(f"Compression is not supported for '{ext}'. Supported: .pdf, .jpg, .docx")
+            print_error(f"Compression is not supported for '{ext}'. Supported: .pdf, .jpg")
             raise typer.Exit(code=1)
     except Exception as e:
         print_error(f"Optimization failed: {e}")

@@ -1,5 +1,8 @@
 from pathlib import Path
+import sys
+import types
 from unittest.mock import patch, MagicMock
+from PIL import Image
 from pdftool import convert
 
 
@@ -97,9 +100,23 @@ def test_jpg_to_pdf(sample_jpg, tmp_path):
 
 def test_jpg_to_png(sample_jpg, tmp_path):
     out = tmp_path / "out.png"
-    convert.jpg_to_png(sample_jpg, output_path=out)
+    def fake_remove(image, session):
+        result = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        result.putpixel((0, 0), (255, 0, 0, 255))
+        return result
+
+    fake_rembg = types.SimpleNamespace(
+        new_session=lambda model: model,
+        remove=fake_remove,
+    )
+    with patch.dict(sys.modules, {"rembg": fake_rembg}):
+        convert.jpg_to_png(sample_jpg, output_path=out)
+
     assert out.exists()
     assert out.stat().st_size > 0
+    with Image.open(out) as image:
+        assert image.mode == "RGBA"
+        assert image.getchannel("A").getextrema() == (0, 255)
 
 
 def test_png_to_jpg(sample_png, tmp_path):

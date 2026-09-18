@@ -4,19 +4,19 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 [![codecov](https://codecov.io/github/GhalyRisyadi/pdf-tool/graph/badge.svg?token=7UNQEW7VV1)](https://codecov.io/github/GhalyRisyadi/pdf-tool)
 
-CLI tool for converting and compressing PDF, JPG, and DOC/DOCX files directly from the terminal.
+CLI tool for converting and compressing PDF and JPG files directly from the terminal.
 
 ## Why use this?
 
 Online services like iLovePDF, SmallPDF, etc., require you to **upload documents to a third-party server** for processing. For sensitive documents (ID cards, driver’s licenses, diplomas, certificates, etc.), this poses a privacy risk. You don’t know where the data is stored, how long it will be kept, or who can access it. There is a risk that your personal data could be misused.
 
-PDFtool processes all files **100% on your own computer**. No uploads, no servers, and no internet connection are required when processing files. Your documents never leave your device.
+PDFtool processes all files **100% on your own computer**. No uploads or third-party processing servers are used.
 
 ## Features
 
 - **Info file** — Check the metadata for PDF, JPG, and DOCX files.
 - **Convert file** — Supports PDF, DOC, JPG, PNG, TXT, Markdown, and HTML.
-- **Optimize file** — Compress PDF, JPG, and DOCX files at 3 levels. Repair PDF and PDF/A. 
+- **Optimize file** — Compress PDF and JPG files at 3 levels. Repair PDF and PDF/A.
 - **Pages Organizer** — Merge and Split PDF, DOCX. Extract pages, Delete pages, and Rotate pages.
 - **Content Extraction** — Extract images, tables, and links from PDF files.
 - **Privacy file** — Strip metadata (PDF, JPG), Encrypt, Decrypt, Sanitize, Redact. 

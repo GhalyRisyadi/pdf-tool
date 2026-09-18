@@ -62,23 +62,6 @@ def test_jpg_compress_cancel(sample_jpg):
     assert not out.exists()
 
 
-def test_doc_compress(sample_docx):
-    with patch("pdftool.compress.ask_compress_level", return_value="low"):
-        compress.doc_compres(sample_docx)
-
-    out = sample_docx.parent / f"{sample_docx.stem}_compressed.docx"
-    assert out.exists()
-    assert out.stat().st_size > 0
-
-
-def test_doc_compress_cancel(sample_docx):
-    with patch("pdftool.compress.ask_compress_level", return_value=None):
-        compress.doc_compres(sample_docx)
-
-    out = sample_docx.parent / f"{sample_docx.stem}_compressed.docx"
-    assert not out.exists()
-
-
 def test_print_result(tmp_path, capsys):
     f = tmp_path / "compressed.pdf"
     f.write_bytes(b"x" * 1024)

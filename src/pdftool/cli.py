@@ -3,7 +3,7 @@ from pathlib import Path
 from .utils import clear, input_file, input_files, ensure_docx
 from .info import pdf_analysis, jpg_analysis, doc_info
 from .convert import markdown_to_pdf, pdf_to_jpg, pdf_to_doc, pdf_to_text, pdf_to_markdown, pdf_to_html, jpg_to_pdf, jpg_to_png, png_to_jpg, doc_to_pdf, pdf_to_pdfa
-from .compress import pdf_compres, jpg_compres, doc_compres
+from .compress import pdf_compres, jpg_compres
 from .pages_organizer import merge_pdf, split_pdf, merge_docx, split_docx, extract_pages, delete_pages, rotate_pages, reorder_pages
 from .privacy import pdf_strip_metadata, jpg_strip_exif, pdf_encrypt, pdf_unlock, pdf_redact
 from .sanitize import pdf_sanitize
@@ -132,12 +132,11 @@ def flow_optimize_file():
             print("─" * 36)
             print("1\tCompress PDF")
             print("2\tCompress JPG")
-            print("3\tCompress DOC/DOCX")
-            print("4\tRepair PDF")
-            print("5\tConvert PDF to PDF/A (Archive)")
+            print("3\tRepair PDF")
+            print("4\tConvert PDF to PDF/A (Archive)")
             print("\n0\tBack")
 
-            choice = input("\nInput [1-5/0] : ").strip()
+            choice = input("\nInput [1-4/0] : ").strip()
 
             if choice == "0":
                 return
@@ -145,9 +144,8 @@ def flow_optimize_file():
             config = {
                 "1": ("PDF",      [".pdf"],          pdf_compres),
                 "2": ("JPG",      [".jpg", ".jpeg"], jpg_compres),
-                "3": ("DOC/DOCX", [".doc", ".docx"], doc_compres),
-                "4": ("PDF",      [".pdf"],          pdf_repair),
-                "5": ("PDF",      [".pdf"],          pdf_to_pdfa),
+                "3": ("PDF",      [".pdf"],          pdf_repair),
+                "4": ("PDF",      [".pdf"],          pdf_to_pdfa),
             }
 
             if choice not in config:
@@ -158,15 +156,7 @@ def flow_optimize_file():
             label, exts, func = config[choice]
             path = input_file(label, exts)
             clear()
-
-            if choice == "3":
-                try:
-                    with ensure_docx(path) as docx_path:
-                        func(docx_path, origin=path)
-                except Exception as e:
-                    print(f"\n[ERROR] {e}")
-            else:
-                func(path)
+            func(path)
             input("\nEnter to continue")
         except (KeyboardInterrupt, EOFError):
             print("\n\n[!] Operation cancelled. Returning to main menu...")

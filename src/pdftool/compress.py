@@ -1,5 +1,3 @@
-import io
-import zipfile
 from pathlib import Path
 
 from .utils import clear
@@ -103,45 +101,6 @@ def jpg_compres(path: Path):
         img = Image.open(path).convert("RGB")
         img.save(str(output), "JPEG", quality=quality, optimize=True)
         img.close()
-        _print_result(output, original_kb)
-
-    except Exception as e:
-        print(f"\n[ERROR] Failed to compress: {e}")
-
-
-def doc_compres(path: Path, origin: Path | None = None): 
-    level = ask_compress_level()
-    if level is None:
-        return
-
-    origin      = origin or path
-    output      = path.parent / f"{path.stem}_compressed.docx"
-    original_kb = path.stat().st_size / 1024
-    quality     = _IMG_QUALITY[level]
-
-    print(f"\n[*] Compressing {origin.name} — level: {level}")
-
-    try:
-        from PIL import Image
-
-        with zipfile.ZipFile(str(path), "r") as zin:
-            with zipfile.ZipFile(str(output), "w", zipfile.ZIP_DEFLATED) as zout:
-                for item in zin.namelist():
-                    data     = zin.read(item)
-                    is_image = (
-                        item.startswith("word/media/")
-                        and item.lower().endswith((".jpg", ".jpeg"))
-                    )
-                    if is_image:
-                        try:
-                            img = Image.open(io.BytesIO(data)).convert("RGB")
-                            buf = io.BytesIO()
-                            img.save(buf, "JPEG", quality=quality, optimize=True)
-                            data = buf.getvalue()
-                        except Exception:
-                            pass  
-                    zout.writestr(item, data)
-
         _print_result(output, original_kb)
 
     except Exception as e:

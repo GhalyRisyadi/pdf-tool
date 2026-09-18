@@ -21,7 +21,7 @@ app.command(name="in", help="Alias for 'info'")(info_cmd)
 app.command(name="convert", help="Convert documents between PDF, JPG, DOCX, etc.")(convert_cmd)
 app.command(name="cv", help="Alias for 'convert'")(convert_cmd)
 
-app.command(name="optimize", help="Compress or repair PDF/JPG/DOCX files")(optimize_cmd)
+app.command(name="optimize", help="Compress or repair PDF/JPG files")(optimize_cmd)
 app.command(name="opti", help="Alias for 'optimize'")(optimize_cmd)
 app.command(name="opt", help="Alias for 'optimize'")(optimize_cmd)
 

@@ -331,18 +331,29 @@ def jpg_to_png(path: Path, output_path: Path = None):
     if output_path is None:
         output_path = path.parent / f"{path.stem}.png"
     
-    print(f"\n[*] Convert JPG → PNG")
+    print(f"\n[*] Remove background: JPG → transparent PNG")
 
     try:
+        from rembg import new_session, remove
+
+        session = new_session("isnet-general-use")
         with Image.open(path) as img:
-            img.save(str(output_path), "PNG")
+            source = img.convert("RGBA")
+            result = remove(source, session=session)
+            if result.mode != "RGBA":
+                result = result.convert("RGBA")
+            result.save(str(output_path), "PNG")
 
         size_kb = output_path.stat().st_size / 1024
         print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
+        print("    Background removed; output includes transparency.")
         print(f"    Saved in : {output_path.resolve()}")
 
+    except ImportError:
+        print("\n[ERROR] Background removal dependencies are not installed.")
+        print("    Install the project dependencies again, then retry.")
     except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+        print(f"\n[ERROR] Failed to remove background: {e}")
 
 def png_to_jpg(path: Path, output_path: Path = None):
     from PIL import Image

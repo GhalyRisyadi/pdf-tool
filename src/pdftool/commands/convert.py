@@ -70,7 +70,7 @@ def convert_cmd(
 
         elif ext in [".md", ".markdown"]:
             if target == "pdf":
-                markdown_to_pdf(file_path, output_dir=output)
+                markdown_to_pdf(file_path, output_dir=output if output else Path("."))
             else:
                 print_error(f"Cannot convert Markdown to '{target}'. Supported: pdf")
                 raise typer.Exit(code=1)
