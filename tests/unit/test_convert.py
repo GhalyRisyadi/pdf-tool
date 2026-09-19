@@ -119,6 +119,18 @@ def test_jpg_to_png(sample_jpg, tmp_path):
         assert image.getchannel("A").getextrema() == (0, 255)
 
 
+def test_jpg_to_png_rejects_same_input_output(sample_jpg):
+    with patch.dict(sys.modules, {"rembg": types.SimpleNamespace()}):
+        convert.jpg_to_png(sample_jpg, output_path=sample_jpg)
+
+
+def test_jpg_to_png_reports_missing_dependency(sample_jpg, tmp_path, capsys):
+    out = tmp_path / "out.png"
+    with patch.dict(sys.modules, {"rembg": None}):
+        convert.jpg_to_png(sample_jpg, output_path=out)
+    assert "requires 'rembg' and 'onnxruntime'" in capsys.readouterr().out
+
+
 def test_png_to_jpg(sample_png, tmp_path):
     out = tmp_path / "out.jpg"
     convert.png_to_jpg(sample_png, output_path=out)

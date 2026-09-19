@@ -7,6 +7,7 @@ from .optimize import optimize_cmd
 from .pages import pages_app
 from .extract import extract_app
 from .privacy import privacy_app
+from .doctor import doctor_cmd
 
 app = typer.Typer(
     help="PDFtool: Privacy-focused, 100% offline document manipulation tool.",
@@ -20,6 +21,7 @@ app.command(name="in", help="Alias for 'info'")(info_cmd)
 
 app.command(name="convert", help="Convert documents between PDF, JPG, DOCX, etc.")(convert_cmd)
 app.command(name="cv", help="Alias for 'convert'")(convert_cmd)
+app.command(name="doctor", help="Check installed dependencies")(doctor_cmd)
 
 app.command(name="optimize", help="Compress or repair PDF/JPG files")(optimize_cmd)
 app.command(name="opti", help="Alias for 'optimize'")(optimize_cmd)

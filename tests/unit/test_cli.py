@@ -49,6 +49,7 @@ def test_typer_help():
     assert "PDFtool" in result.output
     assert "convert" in result.output
     assert "cv" in result.output
+    assert "doctor" in result.output
 
 
 def test_typer_subcommands_help():
@@ -59,6 +60,16 @@ def test_typer_subcommands_help():
     for alias in ["cv", "convert", "opti", "optimize", "pg", "pages", "ex", "extract", "priv", "privacy"]:
         res = runner.invoke(app, [alias, "--help"])
         assert res.exit_code == 0
+
+
+def test_typer_doctor():
+    from typer.testing import CliRunner
+    from pdftool.commands import app
+
+    result = CliRunner().invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    assert "Python packages:" in result.output
+    assert "System tools:" in result.output
 
 
 def test_typer_info_and_alias(sample_pdf):
@@ -112,4 +123,3 @@ def test_main_cli_routing_with_args():
     with patch("sys.argv", ["pdftool", "in", "--help"]), patch("pdftool.commands.app") as mock_app:
         cli.main()
         mock_app.assert_called_once()
-

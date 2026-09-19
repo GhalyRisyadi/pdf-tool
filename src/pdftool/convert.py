@@ -2,6 +2,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from .utils import clear, run_libreoffice_convert
+from .errors import ConversionError, DependencyError
 
 
 def pdf_to_jpg(path: Path, dpi: int = 150, quality: int = 85, output_dir: Path = None):
@@ -334,9 +335,27 @@ def jpg_to_png(path: Path, output_path: Path = None):
     print(f"\n[*] Remove background: JPG → transparent PNG")
 
     try:
-        from rembg import new_session, remove
+        if not path.is_file():
+            raise ConversionError(f"Input is not a file: {path}")
+        if output_path is not None and output_path.resolve() == path.resolve():
+            raise ConversionError("Output path must be different from the input file.")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        session = new_session("isnet-general-use")
+        try:
+            from rembg import new_session, remove
+        except ImportError as exc:
+            raise DependencyError(
+                "Background removal requires 'rembg' and 'onnxruntime'. "
+                "Install the project dependencies and retry."
+            ) from exc
+
+        try:
+            session = new_session("isnet-general-use")
+        except Exception as exc:
+            raise DependencyError(
+                "The background-removal model is unavailable. "
+                "Check network access or the local model cache."
+            ) from exc
         with Image.open(path) as img:
             source = img.convert("RGBA")
             result = remove(source, session=session)
@@ -349,9 +368,8 @@ def jpg_to_png(path: Path, output_path: Path = None):
         print("    Background removed; output includes transparency.")
         print(f"    Saved in : {output_path.resolve()}")
 
-    except ImportError:
-        print("\n[ERROR] Background removal dependencies are not installed.")
-        print("    Install the project dependencies again, then retry.")
+    except DependencyError as e:
+        print(f"\n[ERROR] {e}")
     except Exception as e:
         print(f"\n[ERROR] Failed to remove background: {e}")
 

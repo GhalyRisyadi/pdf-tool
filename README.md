@@ -62,6 +62,7 @@ Execute operations directly from the terminal without prompts. Both full names a
 | **Info** | `info` | `in` | `pdftool in file.pdf` | Inspect document metadata & structure |
 | **Convert** | `convert` | `cv` | `pdftool cv doc.docx --to pdf` | Convert between PDF, DOCX, JPG, PNG, MD, TXT, HTML |
 | | | | `pdftool cv report.pdf --to md -o out.md` | Convert with custom output path |
+| **Diagnostics** | `doctor` | — | `pdftool doctor` | Check Python packages and system tools |
 | **Optimize** | `optimize` | `opti` / `opt` | `pdftool opti doc.pdf -l high` | Compress file (levels: 1=Low, 2=Medium, 3=High) |
 | | | | `pdftool opti broken.pdf --repair` | Repair corrupted PDF structure |
 | | | | `pdftool opti doc.pdf --pdfa` | Convert to standardized PDF/A archive format |
