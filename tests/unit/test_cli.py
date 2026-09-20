@@ -140,6 +140,31 @@ def test_typer_convert_doc_failure_returns_nonzero(sample_pdf):
     assert "conversion failed" in result.output
 
 
+def test_typer_optimize_pdfa_passes_level_and_output(sample_pdf, tmp_path):
+    from typer.testing import CliRunner
+    from pdftool.commands import app
+
+    output = tmp_path / "archive.pdf"
+    with patch("pdftool.commands.optimize.pdf_to_pdfa") as mock_pdfa:
+        result = CliRunner().invoke(
+            app,
+            [
+                "optimize",
+                str(sample_pdf),
+                "--pdfa",
+                "--pdfa-level",
+                "3",
+                "--output",
+                str(output),
+            ],
+        )
+
+    assert result.exit_code == 0
+    mock_pdfa.assert_called_once_with(
+        sample_pdf, output_path=output, level=3
+    )
+
+
 def test_typer_convert_jpg_failure_returns_nonzero(sample_pdf):
     from typer.testing import CliRunner
     from pdftool.commands import app

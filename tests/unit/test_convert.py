@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from PIL import Image
 from pdftool import convert
-from pdftool.errors import ConversionError
+from pdftool.errors import ConversionError, DependencyError
 
 
 def test_pdf_to_jpg(sample_pdf, tmp_path):
@@ -98,11 +98,10 @@ def test_ask_pdfa_level():
         assert convert._ask_pdfa_level() is None
 
 
-def test_pdf_to_pdfa_missing_ghostscript(sample_pdf, capsys):
+def test_pdf_to_pdfa_missing_ghostscript(sample_pdf):
     with patch("shutil.which", return_value=None):
-        convert.pdf_to_pdfa(sample_pdf)
-        captured = capsys.readouterr().out
-        assert "Ghostscript is not installed" in captured
+        with pytest.raises(DependencyError, match="Ghostscript is not installed"):
+            convert.pdf_to_pdfa(sample_pdf)
 
 
 def test_pdf_to_pdfa_success(sample_pdf, tmp_path):
@@ -120,6 +119,24 @@ def test_pdf_to_pdfa_success(sample_pdf, tmp_path):
          patch("subprocess.run", side_effect=mock_gs_run):
         convert.pdf_to_pdfa(sample_pdf, output_path=out)
 
+    assert out.exists()
+
+
+def test_pdf_to_pdfa_uses_explicit_level(sample_pdf, tmp_path):
+    out = tmp_path / "out_pdfa.pdf"
+
+    def mock_gs_run(cmd, capture_output, text, timeout):
+        out.touch()
+        result = MagicMock()
+        result.returncode = 0
+        return result
+
+    with patch("shutil.which", return_value="/usr/bin/gs"), \
+         patch("subprocess.run", side_effect=mock_gs_run) as mock_run:
+        convert.pdf_to_pdfa(sample_pdf, output_path=out, level=3)
+
+    command = mock_run.call_args.args[0]
+    assert "-dPDFA=3" in command
     assert out.exists()
 
 
@@ -151,23 +168,20 @@ def test_jpg_to_png(sample_jpg, tmp_path):
         assert image.getchannel("A").getextrema() == (0, 255)
 
 
-def test_jpg_to_png_rejects_same_input_output(sample_jpg, capsys):
+def test_jpg_to_png_rejects_same_input_output(sample_jpg):
     with patch.dict(sys.modules, {"rembg": types.SimpleNamespace()}):
-        convert.jpg_to_png(sample_jpg, output_path=sample_jpg)
-
-    output = capsys.readouterr().out
-    assert "[ERROR] Output path must be different from the input file." in output
-    assert "Failed to remove background:" not in output
+        with pytest.raises(ConversionError, match="Output path must be different"):
+            convert.jpg_to_png(sample_jpg, output_path=sample_jpg)
 
 
-def test_jpg_to_png_reports_missing_dependency(sample_jpg, tmp_path, capsys):
+def test_jpg_to_png_reports_missing_dependency(sample_jpg, tmp_path):
     out = tmp_path / "out.png"
     with patch.dict(sys.modules, {"rembg": None}):
-        convert.jpg_to_png(sample_jpg, output_path=out)
-    assert "requires 'rembg' and 'onnxruntime'" in capsys.readouterr().out
+        with pytest.raises(DependencyError, match="requires 'rembg' and 'onnxruntime'"):
+            convert.jpg_to_png(sample_jpg, output_path=out)
 
 
-def test_jpg_to_png_preserves_model_runtime_errors(sample_jpg, tmp_path, capsys):
+def test_jpg_to_png_preserves_model_runtime_errors(sample_jpg, tmp_path):
     out = tmp_path / "out.png"
     fake_rembg = types.SimpleNamespace(
         new_session=lambda model: (_ for _ in ()).throw(
@@ -177,11 +191,8 @@ def test_jpg_to_png_preserves_model_runtime_errors(sample_jpg, tmp_path, capsys)
     )
 
     with patch.dict(sys.modules, {"rembg": fake_rembg}):
-        convert.jpg_to_png(sample_jpg, output_path=out)
-
-    output = capsys.readouterr().out
-    assert "Failed to remove background: ONNX Runtime failed to initialize" in output
-    assert "model is unavailable" not in output
+        with pytest.raises(ConversionError, match="ONNX Runtime failed to initialize"):
+            convert.jpg_to_png(sample_jpg, output_path=out)
 
 
 def test_png_to_jpg(sample_png, tmp_path):

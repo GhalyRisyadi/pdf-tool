@@ -6,6 +6,7 @@ import typer
 from ..compress import pdf_compres, jpg_compres
 from ..repair import pdf_repair
 from ..convert import pdf_to_pdfa
+from ..errors import DependencyError, ConversionError
 from ..ui import print_error
 
 def optimize_cmd(
@@ -13,6 +14,7 @@ def optimize_cmd(
     level: int = typer.Option(2, "--level", "-l", help="Compression level: 1 (Low), 2 (Medium), 3 (High)"),
     repair: bool = typer.Option(False, "--repair", "-r", help="Repair corrupted PDF structure"),
     pdfa: bool = typer.Option(False, "--pdfa", help="Convert PDF to standardized PDF/A archive format"),
+    pdfa_level: Optional[int] = typer.Option(None, "--pdfa-level", help="PDF/A level (1, 2, or 3)"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Custom output path"),
 ):
     """Compress or repair a document."""
@@ -22,14 +24,25 @@ def optimize_cmd(
         if ext != ".pdf":
             print_error("Repair is only supported for PDF files.")
             raise typer.Exit(code=1)
-        pdf_repair(file_path, output=output)
+        if output is None:
+            print_error("Please specify an output path for the repaired PDF using --output.")
+            raise typer.Exit(code=1)
+        try:
+            pdf_repair(file_path, output=output)
+        except (DependencyError, ConversionError) as e:
+            print_error(f"Repair failed: {e}")
+            raise typer.Exit(code=1)
         return
 
     if pdfa:
         if ext != ".pdf":
             print_error("PDF/A conversion is only supported for PDF files.")
             raise typer.Exit(code=1)
-        pdf_to_pdfa(file_path, output=output)
+        try:
+            pdf_to_pdfa(file_path, output_path=output, level=pdfa_level)
+        except (DependencyError, ConversionError) as e:
+            print_error(f"PDF/A conversion failed: {e}")
+            raise typer.Exit(code=1)
         return
 
     if level not in [1, 2, 3]:

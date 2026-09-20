@@ -160,7 +160,10 @@ def flow_optimize_file():
             label, exts, func = config[choice]
             path = input_file(label, exts)
             clear()
-            func(path)
+            try:
+                func(path)
+            except (DependencyError, ConversionError) as exc:
+                print(f"\n[ERROR] {exc}")
             input("\nEnter to continue")
         except (KeyboardInterrupt, EOFError):
             print("\n\n[!] Operation cancelled. Returning to main menu...")

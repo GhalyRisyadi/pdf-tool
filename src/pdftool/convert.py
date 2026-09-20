@@ -255,7 +255,7 @@ def _ask_pdfa_level() -> str | None:
 
         return mapping[choice]
 
-def pdf_to_pdfa(path: Path, output_path: Path = None):
+def pdf_to_pdfa(path: Path, output_path: Path = None, level: str | int | None = None):
     import shutil
 
     try:
@@ -274,10 +274,14 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
             "    Windows       : https://www.ghostscript.com/download/gsdnld.html"
         )
 
-    level = _ask_pdfa_level()
     if level is None:
-        raise ConversionError("\n[ERROR] No valid PDF/A level selected.")
-        return
+        level = _ask_pdfa_level()
+        if level is None:
+            return
+    else:
+        level = str(level)
+        if level not in ["1", "2", "3"]:
+            raise ConversionError(f"Invalid PDF/A level: {level!r}. Use 1 (PDF/A-1b), 2 (PDF/A-2b), or 3 (PDF/A-3b).")
 
     try:
         if PdfReader(str(path)).is_encrypted:
@@ -358,7 +362,6 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
             print("\n[!] PDF/A file was not marked as compliant.\n")
 
         print(f"    Saved in : {output_path.resolve()}")
-        
         
         print("\n    [!] This is a best-effort conversion using Ghostscript; it is NOT an official certification.")
         print("        Fonts are embedded, and JavaScript and auto-actions are automatically removed (as prohibited by the PDF/A specification),")
