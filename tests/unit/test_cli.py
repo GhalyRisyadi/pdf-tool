@@ -72,6 +72,32 @@ def test_typer_doctor():
     assert "System tools:" in result.output
 
 
+def test_doctor_cmd_reports_package_and_system_statuses(capsys):
+    from pdftool.commands.doctor import doctor_cmd
+    from pdftool.dependencies import DependencyStatus
+
+    packages = [
+        DependencyStatus("pypdf", True, "python"),
+        DependencyStatus("rembg", False, "python"),
+    ]
+    executables = [
+        DependencyStatus("qpdf", True, "executable"),
+        DependencyStatus("gs", False, "executable"),
+    ]
+
+    with patch("pdftool.commands.doctor.project_dependencies", return_value=packages), \
+         patch("pdftool.commands.doctor.system_dependencies", return_value=executables):
+        doctor_cmd()
+
+    output = capsys.readouterr().out
+    assert "Python packages:" in output
+    assert "  ✓ pypdf" in output
+    assert "  ✗ rembg" in output
+    assert "System tools:" in output
+    assert "  ✓ qpdf" in output
+    assert "  ✗ gs" in output
+
+
 def test_typer_info_and_alias(sample_pdf):
     from typer.testing import CliRunner
     from pdftool.commands import app
@@ -95,6 +121,40 @@ def test_typer_convert_shorthand(sample_docx, tmp_path):
     res = runner.invoke(app, ["cv", str(sample_docx), "--to", "pdf", "-o", str(out_pdf)])
     assert res.exit_code == 0
     assert out_pdf.exists()
+
+
+def test_typer_convert_doc_failure_returns_nonzero(sample_pdf):
+    from typer.testing import CliRunner
+    from pdftool.commands import app
+    from pdftool.errors import ConversionError
+
+    with patch(
+        "pdftool.commands.convert.pdf_to_doc",
+        side_effect=ConversionError("conversion failed"),
+    ):
+        result = CliRunner().invoke(
+            app, ["convert", str(sample_pdf), "--to", "docx"]
+        )
+
+    assert result.exit_code == 1
+    assert "conversion failed" in result.output
+
+
+def test_typer_convert_jpg_failure_returns_nonzero(sample_pdf):
+    from typer.testing import CliRunner
+    from pdftool.commands import app
+    from pdftool.errors import DependencyError
+
+    with patch(
+        "pdftool.commands.convert.pdf_to_jpg",
+        side_effect=DependencyError("Poppler is not installed"),
+    ):
+        result = CliRunner().invoke(
+            app, ["convert", str(sample_pdf), "--to", "jpg"]
+        )
+
+    assert result.exit_code == 1
+    assert "Poppler is not installed" in result.output
 
 
 def test_typer_pages_reorder_shorthand(sample_pdf, tmp_path):
@@ -123,3 +183,13 @@ def test_main_cli_routing_with_args():
     with patch("sys.argv", ["pdftool", "in", "--help"]), patch("pdftool.commands.app") as mock_app:
         cli.main()
         mock_app.assert_called_once()
+
+
+def test_main_routes_doctor_to_typer_app():
+    with patch("sys.argv", ["pdftool", "doctor"]), \
+         patch("pdftool.commands.app") as mock_app, \
+         patch("pdftool.cli.interactive_menu") as mock_menu:
+        cli.main()
+
+    mock_app.assert_called_once()
+    mock_menu.assert_not_called()

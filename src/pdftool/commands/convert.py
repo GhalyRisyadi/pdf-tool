@@ -17,6 +17,7 @@ from ..convert import (
     pdf_to_pdfa,
 )
 from ..ui import print_error
+from ..errors import DependencyError, ConversionError
 
 def convert_cmd(
     file_path: Path = typer.Argument(..., help="Source file path to convert", exists=True, readable=True),
@@ -79,6 +80,9 @@ def convert_cmd(
             print_error(f"Unsupported source format '{ext}'.")
             raise typer.Exit(code=1)
 
-    except Exception as e:
-        print_error(f"Conversion failed: {e}")
+    except (DependencyError, ConversionError) as exc:
+        print_error(str(exc))
+        raise typer.Exit(code=1)
+    except Exception as exc:
+        print_error(f"Conversion failed: {exc}")
         raise typer.Exit(code=1)

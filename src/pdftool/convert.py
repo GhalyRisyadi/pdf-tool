@@ -6,7 +6,7 @@ from .errors import ConversionError, DependencyError
 
 
 def pdf_to_jpg(path: Path, dpi: int = 150, quality: int = 85, output_dir: Path = None):
-    from pdf2image import convert_from_path
+    import shutil
 
     if output_dir is None:
         output_dir = path.parent
@@ -14,6 +14,26 @@ def pdf_to_jpg(path: Path, dpi: int = 150, quality: int = 85, output_dir: Path =
     print(f"\n[*] Convert PDF → JPG  |  DPI: {dpi}  |  Quality: {quality}%")
 
     try:
+        if not path.is_file():
+            raise ConversionError(f"Input is not a file: {path}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            from pdf2image import convert_from_path
+        except ImportError as exc:
+            raise DependencyError(
+                "PDF → JPG requires the 'pdf2image' package. "
+                "Install the project dependencies and retry."
+            ) from exc
+
+        if shutil.which("pdftoppm") is None or shutil.which("pdfinfo") is None:
+            raise DependencyError(
+                "Poppler is not installed (needs 'pdftoppm' and 'pdfinfo').\n"
+                "    Ubuntu/Debian : sudo apt install poppler-utils\n"
+                "    macOS         : brew install poppler\n"
+                "    Windows       : https://github.com/oschwartz10612/poppler-windows/releases"
+            )
+
         images = convert_from_path(str(path), dpi=dpi)
         for i, img in enumerate(images):
             out = output_dir / f"{path.stem}_{i + 1:03d}.jpg"
@@ -22,36 +42,56 @@ def pdf_to_jpg(path: Path, dpi: int = 150, quality: int = 85, output_dir: Path =
 
         print(f"\n[✓] {len(images)} files saved in: {output_dir.resolve()}")
 
+    except (DependencyError, ConversionError):
+        raise
     except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
-        if any(k in str(e).lower() for k in ["poppler", "pdftoppm", "pdfinfo"]):
-            print("\n[!] Poppler is not installed.")
-            print("    Ubuntu/Debian : sudo apt install poppler-utils")
-            print("    macOS         : brew install poppler")
-            print("    Windows       : https://github.com/oschwartz10612/poppler-windows/releases")
+        raise ConversionError(f"Failed to convert PDF to JPG: {e}") from e
+
 
 def pdf_to_doc(path: Path, output_path: Path = None):
-    from pdf2docx import Converter
+    try:
+        from pdf2docx import Converter
+    except ImportError as exc:
+        raise DependencyError(
+            "PDF → DOCX requires the 'pdf2docx' package. "
+            "Install the project dependencies and retry."
+        ) from exc
 
     if output_path is None:
         output_path = path.parent / f"{path.stem}.docx"
 
     print(f"\n[*] Convert PDF → DOCX")
 
+    cv = None
     try:
         cv = Converter(str(path))
         cv.convert(str(output_path))
-        cv.close()
+
+        if not output_path.is_file() or output_path.stat().st_size == 0:
+            raise ConversionError(
+                f"PDF → DOCX did not produce a valid output file: {output_path}"
+            )
 
         size_kb = output_path.stat().st_size / 1024
         print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
         print(f"    Saved in : {output_path.resolve()}")
 
-    except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+    except (DependencyError, ConversionError):
+        raise
+    except Exception as exc:
+        raise ConversionError(f"Failed to convert PDF to DOCX: {exc}") from exc
+    finally:
+        if cv is not None:
+            cv.close()
 
 def pdf_to_text(path: Path, output_path: Path = None):
-    from pypdf import PdfReader
+    try:
+        from pypdf import PdfReader
+    except ImportError as exc:
+        raise DependencyError(
+            "PDF → Text requires the 'pypdf' package. "
+            "Install the project dependencies and retry."
+        ) from exc
 
     if output_path is None:
         output_path = path.parent / f"{path.stem}.txt"
@@ -81,12 +121,20 @@ def pdf_to_text(path: Path, output_path: Path = None):
             print(f"\n    [!] {empty_pages}/{total} pages have no extractable text.")
             print("        Likely scan/image results — requires OCR, not standard text extraction.")
 
-    except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+    except (DependencyError, ConversionError):
+        raise
+    except Exception as exc:
+        raise ConversionError(f"Failed to convert PDF to Text: {exc}") from exc
 
 def pdf_to_markdown(path: Path, output_path: Path = None):
-    import pymupdf4llm
-    
+    try:
+        import pymupdf4llm
+    except ImportError as exc:
+        raise DependencyError(
+            "PDF → Markdown requires the 'pymupdf4llm' package. "
+            "Install the project dependencies and retry."
+        ) from exc
+
     if output_path is None:
         output_path = path.parent / f"{path.stem}.md"
     
@@ -101,18 +149,27 @@ def pdf_to_markdown(path: Path, output_path: Path = None):
         print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.1f} KB)")
         print(f"    Saved in : {output_path.resolve()}")
         
-    except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+    except (DependencyError, ConversionError):
+        raise
+    except Exception as exc:
+        raise ConversionError(f"Failed to convert PDF to Markdown: {exc}") from exc
 
 def pdf_to_html(path: Path, output_path: Path = None):
-    from pdf2docx import Converter
-    import mammoth
+    try:
+        from pdf2docx import Converter
+        import mammoth
+    except ImportError as exc:
+        raise DependencyError(
+            "PDF → HTML requires the 'pdf2docx' and 'mammoth' packages. "
+            "Install the project dependencies and retry."
+        ) from exc
 
     if output_path is None:
         output_path = path.parent / f"{path.stem}.html"
         
     print(f"\n[*] Convert PDF → HTML")
 
+    cv = None
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             temp_docx = Path(tmpdir) / "temp.docx"
@@ -122,7 +179,6 @@ def pdf_to_html(path: Path, output_path: Path = None):
             import logging
             logging.getLogger().setLevel(logging.ERROR) 
             cv.convert(str(temp_docx))
-            cv.close()
 
             with open(temp_docx, "rb") as docx_file:
                 result = mammoth.convert_to_html(docx_file)
@@ -167,8 +223,13 @@ def pdf_to_html(path: Path, output_path: Path = None):
             for msg in messages:
                 print(f"        - {msg}")
 
-    except Exception as e:
-        print(f"\n[ERROR] Failed to convert {e}")
+    except (DependencyError, ConversionError):
+        raise
+    except Exception as exc:
+        raise ConversionError(f"Failed to convert PDF to HTML: {exc}") from exc
+    finally:
+        if cv is not None:
+            cv.close()
 
 def _ask_pdfa_level() -> str | None:
     while True:
@@ -197,25 +258,34 @@ def _ask_pdfa_level() -> str | None:
 def pdf_to_pdfa(path: Path, output_path: Path = None):
     import shutil
 
+    try:
+        from pypdf import PdfReader
+    except ImportError as exc:
+        raise DependencyError(
+            "PDF → PDF/A requires the 'pypdf' package. "
+            "Install the project dependencies and retry."
+        ) from exc
+
     if shutil.which("gs") is None:
-        print("\n[ERROR] Ghostscript is not installed.")
-        print("    Ubuntu/Debian : sudo apt install ghostscript")
-        print("    macOS         : brew install ghostscript")
-        print("    Windows       : https://www.ghostscript.com/download/gsdnld.html")
-        return
+        raise DependencyError(
+            "[ERROR] Ghostscript is not installed.\n"
+            "   Ubuntu/Debian  : sudo apt install ghostscript\n"
+            "    macOS         : brew install ghostscript\n"
+            "    Windows       : https://www.ghostscript.com/download/gsdnld.html"
+        )
 
     level = _ask_pdfa_level()
     if level is None:
+        raise ConversionError("\n[ERROR] No valid PDF/A level selected.")
         return
 
     try:
-        from pypdf import PdfReader
         if PdfReader(str(path)).is_encrypted:
-            print("\n[ERROR] PDF is encrypted. Please unlock it first.")
-            return
+            raise ConversionError("\n[ERROR] PDF is encrypted. Please unlock it first.")
+    except (DependencyError, ConversionError):
+        raise
     except Exception as e:
-        print(f"\n[ERROR] Failed to read PDF: {e}")
-        return
+        raise ConversionError(f"\n[ERROR] Failed to read PDF: {e}") from e
 
     if output_path is None:
         output_path = path.parent / f"{path.stem}_pdfa.pdf"
@@ -242,8 +312,7 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
         )
 
         if result.returncode != 0 or not output_path.exists():
-            print(f"\n[ERROR] Failed to convert: {result.stderr}")
-            return
+            raise ConversionError(f"\n[ERROR] Failed to convert: {result.stderr}")
 
         print("\n[✓] PDF/A document generated.\n")
         print(f"[*] Validating PDF/A-{level}b...")
@@ -300,34 +369,50 @@ def pdf_to_pdfa(path: Path, output_path: Path = None):
 
 
     except subprocess.TimeoutExpired:
-        print("\n[ERROR] Conversion timeout (file too large/complex).")
+        raise ConversionError("\n[ERROR] Conversion timeout (file too large/complex).")
 
+    except (DependencyError, ConversionError):
+        raise
     except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+        raise ConversionError(f"\n[ERROR] Failed to convert: {e}") from e
 
 
 def jpg_to_pdf(path: Path, output_path: Path = None):
-    from PIL import Image
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise DependencyError(
+            "JPG → PDF conversion requires the 'PIL' package. "
+            "Install the project dependencies and retry."
+        ) from exc
 
     if output_path is None:
         output_path = path.parent / f"{path.stem}.pdf"
 
     print(f"\n[*] Convert JPG → PDF")
 
-    try:
-        img = Image.open(path).convert("RGB")
-        img.save(str(output_path), "PDF", resolution=150.0)
-        img.close()
-
-        size_kb = output_path.stat().st_size / 1024
-        print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
-        print(f"    Saved in : {output_path.resolve()}")
-
-    except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+    with Image.open(path) as img:
+        try:
+            img = Image.open(path).convert("RGB")
+            img.save(str(output_path), "PDF", resolution=150.0)
+            img.close()
+    
+            size_kb = output_path.stat().st_size / 1024
+            print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
+            print(f"    Saved in : {output_path.resolve()}")
+        except (DependencyError, ConversionError):
+            raise
+        except Exception as e:
+            raise ConversionError(f"\n[ERROR] Failed to convert: {e}") from e
 
 def jpg_to_png(path: Path, output_path: Path = None):
-    from PIL import Image
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise DependencyError(
+            "JPG → PNG conversion requires the 'PIL' package. "
+            "Install the project dependencies and retry."
+        ) from exc
 
     if output_path is None:
         output_path = path.parent / f"{path.stem}.png"
@@ -350,8 +435,10 @@ def jpg_to_png(path: Path, output_path: Path = None):
             ) from exc
 
         try:
+            from requests.exceptions import RequestException
+
             session = new_session("isnet-general-use")
-        except Exception as exc:
+        except (ConnectionError, OSError, RequestException, TimeoutError) as exc:
             raise DependencyError(
                 "The background-removal model is unavailable. "
                 "Check network access or the local model cache."
@@ -368,13 +455,19 @@ def jpg_to_png(path: Path, output_path: Path = None):
         print("    Background removed; output includes transparency.")
         print(f"    Saved in : {output_path.resolve()}")
 
-    except DependencyError as e:
-        print(f"\n[ERROR] {e}")
+    except (DependencyError, ConversionError):
+        raise
     except Exception as e:
-        print(f"\n[ERROR] Failed to remove background: {e}")
+        raise ConversionError(f"\n[ERROR] Failed to remove background: {e}") from e
 
 def png_to_jpg(path: Path, output_path: Path = None):
-    from PIL import Image
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise DependencyError(
+            "PNG → JPG conversion requires the 'PIL' package. "
+            "Install the project dependencies and retry."
+        ) from exc
 
     if output_path is None:
         output_path = path.parent / f"{path.stem}.jpg"
@@ -403,9 +496,11 @@ def png_to_jpg(path: Path, output_path: Path = None):
         print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
         print(f"    Saved in : {output_path.resolve()}")
 
+    except (DependencyError, ConversionError):
+        raise
     except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
-    
+        raise ConversionError(f"\n[ERROR] Failed to convert: {e}") from e
+
 def doc_to_pdf(path: Path, output_dir: Path = None):
     if output_dir is None:
         output_dir = path.parent
@@ -419,23 +514,26 @@ def doc_to_pdf(path: Path, output_dir: Path = None):
         output_path = output_dir / f"{path.stem}.pdf"
 
         if result.returncode != 0 or not output_path.exists():
-            print(f"\n[ERROR] Failed to convert: {result.stderr}")
-            return
+            raise ConversionError(f"\n[ERROR] Failed to convert: {result.stderr}")
 
         size_kb = output_path.stat().st_size / 1024
         print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
         print(f"    Saved in : {output_path.resolve()}")
 
     except FileNotFoundError:
-        print("\n[ERROR] LibreOffice is not installed.")
-        print("    Ubuntu/Debian : sudo apt install libreoffice")
-        print("    Windows       : https://www.libreoffice.org/download/download/")
+        raise DependencyError(
+            "[ERROR] LibreOffice is not installed.\n"
+            "    Ubuntu/Debian : sudo apt install libreoffice\n"
+            "    Windows       : https://www.libreoffice.org/download/download/"
+        )
 
     except subprocess.TimeoutExpired:
-        print("\n[ERROR] Conversion timeout (file too large/complex).")
+        raise ConversionError("\n[ERROR] Conversion timeout (file too large/complex).")
 
+    except (DependencyError, ConversionError):
+        raise
     except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+        raise ConversionError(f"\n[ERROR] Failed to convert: {e}") from e
 
 def markdown_to_pdf(path: Path, output_dir: Path = None):
     if output_dir is None:
@@ -450,20 +548,23 @@ def markdown_to_pdf(path: Path, output_dir: Path = None):
         output_path = output_dir / f"{path.stem}.pdf"
 
         if result.returncode != 0 or not output_path.exists():
-            print(f"\n[ERROR] Failed to convert: {result.stderr}")
-            return
+            raise ConversionError(f"\n[ERROR] Failed to convert: {result.stderr}")
 
         size_kb = output_path.stat().st_size / 1024
         print(f"\n[✓] Converted: {output_path.name}  ({size_kb:.0f} KB)")
         print(f"    Saved in : {output_path.resolve()}")
 
     except FileNotFoundError:
-        print("\n[ERROR] LibreOffice is not installed.")
-        print("    Ubuntu/Debian : sudo apt install libreoffice")
-        print("    Windows       : https://www.libreoffice.org/download/download/")
+        raise DependencyError(
+            "[ERROR] LibreOffice is not installed.\n"
+            "    Ubuntu/Debian : sudo apt install libreoffice\n"
+            "    Windows       : https://www.libreoffice.org/download/download/"
+        )
 
     except subprocess.TimeoutExpired:
-        print("\n[ERROR] Conversion timeout (file too large/complex).")
+        raise ConversionError("\n[ERROR] Conversion timeout (file too large/complex).")
 
+    except (DependencyError, ConversionError):
+        raise
     except Exception as e:
-        print(f"\n[ERROR] Failed to convert: {e}")
+        raise ConversionError(f"\n[ERROR] Failed to convert: {e}") from e

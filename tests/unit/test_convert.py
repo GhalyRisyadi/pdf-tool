@@ -1,9 +1,11 @@
 from pathlib import Path
 import sys
 import types
+import pytest
 from unittest.mock import patch, MagicMock
 from PIL import Image
 from pdftool import convert
+from pdftool.errors import ConversionError
 
 
 def test_pdf_to_jpg(sample_pdf, tmp_path):
@@ -16,11 +18,41 @@ def test_pdf_to_doc(sample_pdf, tmp_path):
     out = tmp_path / "out.docx"
     with patch("pdf2docx.Converter") as mock_conv:
         mock_instance = mock_conv.return_value
-        mock_instance.convert.side_effect = lambda path: Path(path).touch()
+        mock_instance.convert.side_effect = lambda path: Path(path).write_bytes(b"mock docx")
         convert.pdf_to_doc(sample_pdf, output_path=out)
         mock_instance.convert.assert_called_once()
         mock_instance.close.assert_called_once()
     assert out.exists()
+
+
+def test_pdf_to_doc_closes_converter_when_conversion_fails(sample_pdf, tmp_path):
+    out = tmp_path / "out.docx"
+    with patch("pdf2docx.Converter") as mock_conv:
+        mock_instance = mock_conv.return_value
+        mock_instance.convert.side_effect = RuntimeError("conversion failed")
+
+        with pytest.raises(ConversionError, match="conversion failed"):
+            convert.pdf_to_doc(sample_pdf, output_path=out)
+
+        mock_instance.close.assert_called_once()
+
+
+def test_pdf_to_doc_preserves_constructor_failure(sample_pdf, tmp_path):
+    out = tmp_path / "out.docx"
+    with patch("pdf2docx.Converter", side_effect=RuntimeError("invalid PDF")):
+        with pytest.raises(ConversionError, match="invalid PDF"):
+            convert.pdf_to_doc(sample_pdf, output_path=out)
+
+
+def test_pdf_to_doc_rejects_missing_output(sample_pdf, tmp_path):
+    out = tmp_path / "missing.docx"
+    with patch("pdf2docx.Converter") as mock_conv:
+        mock_conv.return_value.convert.return_value = None
+
+        with pytest.raises(ConversionError, match="did not produce a valid output"):
+            convert.pdf_to_doc(sample_pdf, output_path=out)
+
+        mock_conv.return_value.close.assert_called_once()
 
 
 def test_pdf_to_text(sample_pdf, tmp_path):
@@ -119,9 +151,13 @@ def test_jpg_to_png(sample_jpg, tmp_path):
         assert image.getchannel("A").getextrema() == (0, 255)
 
 
-def test_jpg_to_png_rejects_same_input_output(sample_jpg):
+def test_jpg_to_png_rejects_same_input_output(sample_jpg, capsys):
     with patch.dict(sys.modules, {"rembg": types.SimpleNamespace()}):
         convert.jpg_to_png(sample_jpg, output_path=sample_jpg)
+
+    output = capsys.readouterr().out
+    assert "[ERROR] Output path must be different from the input file." in output
+    assert "Failed to remove background:" not in output
 
 
 def test_jpg_to_png_reports_missing_dependency(sample_jpg, tmp_path, capsys):
@@ -129,6 +165,23 @@ def test_jpg_to_png_reports_missing_dependency(sample_jpg, tmp_path, capsys):
     with patch.dict(sys.modules, {"rembg": None}):
         convert.jpg_to_png(sample_jpg, output_path=out)
     assert "requires 'rembg' and 'onnxruntime'" in capsys.readouterr().out
+
+
+def test_jpg_to_png_preserves_model_runtime_errors(sample_jpg, tmp_path, capsys):
+    out = tmp_path / "out.png"
+    fake_rembg = types.SimpleNamespace(
+        new_session=lambda model: (_ for _ in ()).throw(
+            RuntimeError("ONNX Runtime failed to initialize")
+        ),
+        remove=MagicMock(),
+    )
+
+    with patch.dict(sys.modules, {"rembg": fake_rembg}):
+        convert.jpg_to_png(sample_jpg, output_path=out)
+
+    output = capsys.readouterr().out
+    assert "Failed to remove background: ONNX Runtime failed to initialize" in output
+    assert "model is unavailable" not in output
 
 
 def test_png_to_jpg(sample_png, tmp_path):

@@ -10,6 +10,7 @@ from .sanitize import pdf_sanitize
 from .pii_scanner import pii_scan
 from .repair import pdf_repair
 from .extraction import extract_images_from_pdf, extract_links_from_pdf, extract_tables_from_pdf, run_ocr
+from .errors import ConversionError, DependencyError
 
 
 import sys
@@ -118,7 +119,10 @@ def flow_convert_file():
             label, exts, func = config[choice]
             path = input_file(label, exts)
             clear()
-            func(path)
+            try:
+                func(path)
+            except (DependencyError, ConversionError) as exc:
+                print(f"\n[ERROR] {exc}")
             input("\nEnter to continue")
         except (KeyboardInterrupt, EOFError):
             print("\n\n[!] Operation cancelled. Returning to main menu...")
@@ -333,6 +337,7 @@ KNOWN_COMMANDS = {
     "extract", "ex", "ext",
     "privacy", "priv", "sec",
     "--help", "-h", "--install-completion", "--show-completion",
+    "--version", "-v", "doctor",
 }
 
 
